@@ -47,6 +47,16 @@ final class HtmlView extends BaseHtmlView
 
     public int $total = 0;
 
+    /**
+     * Days per page of the table (1.2.9): a long From – To (up to a year) is cut into pages, as
+     * on the Manager Dashboard, instead of one very long table. A month always fits on one page.
+     */
+    public const PAGE_SIZE = 31;
+
+    public int $page = 1;
+
+    public int $pages = 1;
+
     public function display($tpl = null): void
     {
         /** @var AttendanceModel $model */
@@ -80,8 +90,10 @@ final class HtmlView extends BaseHtmlView
         $rows = array_values(array_filter($this->period->days, fn (Day $d): bool => DayFilter::matches($d, $this->status)));
 
         $this->total = \count($rows);
-        // Every day of the month or of From – To on one page (0.9.1): no second page.
-        $this->rows  = $rows;
+        // The cards count every day; the table shows PAGE_SIZE of them at a time (1.2.9).
+        $this->pages = max(1, (int) ceil($this->total / self::PAGE_SIZE));
+        $this->page  = min(max(1, $input->getInt('page', 1)), $this->pages);
+        $this->rows  = \array_slice($rows, ($this->page - 1) * self::PAGE_SIZE, self::PAGE_SIZE);
 
         $this->preparePage($model, 'attendance', 'COM_BIOTIME_ATTENDANCE_TITLE');
         $model->logPage('attendance', ($range !== null ? $this->from . '..' . $this->to : \sprintf('%04d-%02d', $this->year, $this->month)) . ($this->status !== '' ? ' status=' . $this->status : ''));
@@ -89,10 +101,10 @@ final class HtmlView extends BaseHtmlView
         parent::display($tpl);
     }
 
-    /** This page with the same month or range, filtered by $status. */
-    public function filterUrl(string $status): string
+    /** This page with the same month or range, filtered by $status; $page > 1 for another page of days. */
+    public function filterUrl(string $status, int $page = 1): string
     {
-        $extra = array_filter(['status' => $status]);
+        $extra = array_filter(['status' => $status, 'page' => $page > 1 ? (string) $page : '']);
 
         return $this->from !== ''
             ? $this->url('view=attendance&' . http_build_query(['from' => $this->from, 'to' => $this->to] + $extra))

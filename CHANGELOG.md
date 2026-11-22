@@ -3,6 +3,11 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.2.9] - 2026-11-22
+
+### Changed
+- **My Attendance: pages of days.** A long period (From – To up to a year) is no longer one very long table: it shows **31 days per page** with *Previous*, *Page 2 of 12* and *Next* under the table, as on the Manager Dashboard. A month always fits on one page. The cards and the day count above the table still count the whole period; choosing a card, month or date starts again at page 1.
+
 ## [1.2.8] - 2026-11-21
 
 ### Changed
