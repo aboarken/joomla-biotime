@@ -41,8 +41,12 @@ $at     = static fn (int $time): string => HTMLHelper::_('date', $time, Text::_(
                 <textarea class="form-control font-monospace small" id="bt-diag-report" rows="18" readonly><?php echo $e($diag['report']); ?></textarea>
                 <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
                     <button class="btn btn-secondary" type="button" id="bt-diag-copy" data-done="<?php echo $e(Text::_('COM_BIOTIME_DIAG_COPIED')); ?>" data-failed="<?php echo $e(Text::_('COM_BIOTIME_DIAG_COPY_FAILED')); ?>"><span class="icon-copy" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_COPY'); ?></button>
-                    <?php // 1.3.2: a text file, when the browser does not allow copying. ?>
-                    <button class="btn btn-outline-secondary" type="button" id="bt-diag-download" data-file="biotime-diagnostics-<?php echo gmdate('Ymd-Hi', (int) $diag['at']); ?>.txt"><span class="icon-download" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_DOWNLOAD'); ?></button>
+                    <?php // A text file sent by the server (1.3.3): needs no script and no clipboard. ?>
+                    <form method="post" action="<?php echo $action; ?>" class="d-inline">
+                        <input type="hidden" name="task" value="tables.download">
+                        <?php echo $token; ?>
+                        <button class="btn btn-outline-secondary" type="submit"><span class="icon-download" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_DOWNLOAD'); ?></button>
+                    </form>
                     <span class="small" id="bt-diag-status" role="status" aria-live="polite"></span>
                 </div>
                 <p class="small text-muted mt-2 mb-0"><?php echo Text::_('COM_BIOTIME_DIAG_PRIVACY'); ?></p>

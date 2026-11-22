@@ -52,6 +52,11 @@ those releases.
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
 
+### 1.3.3 – New files after an update
+- [ ] Update from 1.3.2 through System → Update → Extensions, then open Find Tables **without** clearing the browser cache: in the page source the script is `…/com_biotime/js/admin.js?1.3.3`.
+- [ ] Run Diagnostics → **Copy report**: "Copied to the clipboard."; **Download report**: a file `biotime-diagnostics-<date>.txt`.
+- [ ] Portal pages: `portal.css?1.3.3` and the scripts with `?1.3.3`.
+
 ### 1.3.2 – Diagnostics: copy and download
 - [ ] Find Tables → Run Diagnostics → **Copy report**: "Copied to the clipboard." appears; paste in a text editor: the whole report.
 - [ ] **Download report**: a file `biotime-diagnostics-<date>.txt` with the same report.

@@ -167,6 +167,36 @@ final class TablesController extends BaseController
     }
 
     /**
+     * The last Diagnostics report as a text file (1.3.3): sent by the server, so it needs no
+     * script and no clipboard. Only the report kept in this administrator's own session.
+     */
+    public function download(): void
+    {
+        $this->guard();
+
+        $diag = $this->app->getUserState(self::STATE_DIAG);
+
+        if (!\is_array($diag) || !\is_string($diag['report'] ?? null) || $diag['report'] === '') {
+            $this->app->enqueueMessage(Text::_('COM_BIOTIME_DIAG_NONE'), 'warning');
+            $this->setRedirect(Route::_(self::URL . '#bt-diag', false));
+
+            return;
+        }
+
+        $name = 'biotime-diagnostics-' . gmdate('Ymd-Hi', (int) ($diag['at'] ?? time())) . '.txt';
+
+        $this->app->setHeader('Content-Type', 'text/plain; charset=utf-8', true);
+        $this->app->setHeader('Content-Disposition', 'attachment; filename="' . $name . '"', true);
+        $this->app->setHeader('X-Content-Type-Options', 'nosniff', true);
+        $this->app->setHeader('Cache-Control', 'no-store, private', true);
+        $this->app->sendHeaders();
+
+        echo $diag['report'];
+
+        $this->app->close();
+    }
+
+    /**
      * A connection with the saved settings (the same read-only user as the portal pages).
      *
      * @throws DbException

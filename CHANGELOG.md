@@ -3,6 +3,15 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.3] - 2026-11-22
+
+### Fixed
+- **After an update, browsers kept the previous release's scripts and styles.** Joomla adds a media version to each file's address (`admin.js?abc123`) so browsers fetch new files, but its extension update (*System → Update → Extensions*) does not renew that version (only a fresh install does). After updating to 1.3.2, browsers therefore still ran the 1.3.0 `admin.js`: *Copy report* did not copy and *Download report* did nothing. Every script and style now carries the component's own version (`admin.js?1.3.3`), so its address changes with each release and browsers load the new file. The portal's stylesheet and scripts benefit as well.
+- **Download report** is now sent by the server (a normal form): it works with any browser, script or clipboard setting.
+
+### Changed
+- `build/verify-package.py` and a unit test check that every asset carries the component version.
+
 ## [1.3.2] - 2026-11-22
 
 ### Fixed
