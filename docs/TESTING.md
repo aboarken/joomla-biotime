@@ -52,6 +52,13 @@ those releases.
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
 
+### 1.3.0 – Find Tables
+- [ ] Components → ZKBioTime → **Find Tables** (submenu) opens for a super user; another administrator gets 403.
+- [ ] **Run Diagnostics**: the report lists the portal, connection (*Safe for the portal: yes*), each known table as ok / NOT READABLE / missing, the codes in use and the recent data. **Copy report** copies it. It holds no person's name, employee code, address, database user or password.
+- [ ] **Find Tables**: every known table shows *Readable* (or *Not found*); other tables of the server are listed below them; the search filter narrows the list.
+- [ ] **Check** on `att_leave`: columns and types, `workflowinstance_ptr_id` as PK, FK → `workflow_workflowinstance.id` (link opens that table); **Check** `workflow_workflowinstance`: *Tables that point to this one* lists `att_leave` and `workflow_nodeinstance`; `approval_status` lists values such as 1, 2, 3 with counts.
+- [ ] A table the user may not read shows its columns with "may not read this table"; a name like `x; DROP` is refused.
+
 ### 1.2.9 – My Attendance pages
 - [ ] My Attendance, From 01/08/2026 To 31/07/2027: the table shows 31 days with *Previous / Page 1 of 12 / Next* under it; Next goes to the following days and keeps the dates and the chosen card.
 - [ ] Choose a card (e.g. Late In): the list starts again at page 1 and has as many pages as needed.

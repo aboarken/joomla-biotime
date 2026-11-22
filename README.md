@@ -93,6 +93,20 @@ page says so when the user's own Joomla time zone differs. Times are never shift
   **Re-match**. The status filter *No mapping yet* lists Joomla users that are not matched, and
   *Waiting for approval* the new matches by e-mail an administrator still has to
   confirm (select several, **Confirm**).
+- **Find Tables** (1.3.0): find the tables of ZKBioTime's database and what they hold, to check
+  the portal's tables on a server or to identify the tables a new feature needs (like *Find
+  Endpoints* in the ServiceDesk Plus portal). Read only, with the portal's read-only user.
+  - **Diagnostics**: one click writes a report to copy into a support request: settings (no
+    address, user or password), connection (encrypted, read-only), each table the portal knows
+    (found, readable, about how many rows), the codes the server stores for statuses and punch
+    types, and how much ZKBioTime calculated recently.
+  - **1. Tables**: the tables the portal knows, with what they hold and which page reads them,
+    and every other table the database user can see; readable or not, about how many rows.
+  - **2. Check a table**: its columns and types, primary and foreign keys (with links to the table
+    each key points to), the tables that point to it, its row count, how often each column is
+    filled and, for code columns only (status, type, flag…), which values are used and how often.
+  - Names, types and counts only: never a name, employee code, date or text of an employee.
+    Super users only; at most 60 runs per hour; each run is in the audit log.
 
 ## Requirements
 
@@ -318,7 +332,7 @@ Passwords and personal data are never written to it. With *Detailed logging* off
 | is not set up yet | Integration Settings → ZKBioTime Database: PostgreSQL, server, user and password saved; the encryption secret unchanged |
 | could not be reached | Server and *Connect via*, firewall, SSL settings, timeouts; **Test Database** names the problem and the log has the database server's message |
 | did not accept the portal's credentials | The database user and password (and `pg_hba.conf`) |
-| is not available right now | The database name, and that the read-only user may read the tables (**Test Database**) |
+| is not available right now | The database name, and that the read-only user may read the tables (**Test Database**, or **Find Tables → Diagnostics**: each table the portal reads, found and readable or not) |
 | could not find what was asked for | No (or more than one) employee in ZKBioTime has the user's mapped employee code |
 | You don't have access to view departments (Manager Dashboard) | The manager's ZKBioTime user (see *Manager Dashboard access*), its data permissions, and the `auth_user` grant (docs/DATABASE.md); the log line says which one is missing |
 | Colours or the letterhead missing in the PDF | Turn on *Background graphics* in the print dialog; set the logo and texts in *Integration Settings → Report Letterhead* |
