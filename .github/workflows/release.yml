@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php }}
           extensions: openssl, pdo_pgsql
@@ -88,7 +88,7 @@ jobs:
       # The component needs PHP 8.3 (script.php): lint and test with that version, not whatever
       # the runner image ships.
       - name: Set up PHP 8.3
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2, pinned to the commit: this job may write releases
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.37.2, pinned to the commit: this job may write releases
         with:
           php-version: '8.3'
           extensions: openssl, pdo_pgsql
