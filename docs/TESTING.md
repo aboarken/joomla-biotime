@@ -52,6 +52,10 @@ those releases.
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
 
+### 1.3.1 – Find Tables: some columns
+- [ ] Find Tables → Diagnostics: `auth_user` shows `[some columns]` (not NOT READABLE). In the list it has the *Some columns* badge.
+- [ ] Check `auth_user`: an info note explains the partial grant; `password` shows *not granted*; the other columns show how often they are filled.
+
 ### 1.3.0 – Find Tables
 - [ ] Components → ZKBioTime → **Find Tables** (submenu) opens for a super user; another administrator gets 403.
 - [ ] **Run Diagnostics**: the report lists the portal, connection (*Safe for the portal: yes*), each known table as ok / NOT READABLE / missing, the codes in use and the recent data. **Copy report** copies it. It holds no person's name, employee code, address, database user or password.

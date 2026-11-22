@@ -80,7 +80,8 @@ final class TableDiagnostics
 
         foreach (TableCatalog::all() as $t) {
             $found  = $byName[$t['name']] ?? null;
-            $state  = $found === null ? 'missing' : ($found['readable'] ? 'ok' : 'NOT READABLE');
+            // Some columns only (1.3.1): by design for auth_user, whose password column is never granted.
+            $state  = $found === null ? 'missing' : ($found['readable'] ? 'ok' : (($found['partial'] ?? false) ? 'some columns' : 'NOT READABLE'));
             $rows   = $found !== null && $found['estimate'] !== null ? '~' . number_format($found['estimate']) . ' rows' : '';
             $out[]  = str_pad('[' . $state . ']', 15) . str_pad($t['name'], $width + 2) . str_pad($rows, 18) . $t['section'] . ($t['portal'] !== '' ? ': ' . $t['portal'] : ($t['planned'] ? ': Leave Request (planned)' : ''));
         }

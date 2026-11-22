@@ -3,6 +3,11 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] - 2026-11-22
+
+### Fixed
+- **Find Tables showed `auth_user` as "NOT READABLE"** although the portal reads it. On a correctly set-up server only eight of its columns are granted, never the password hash (docs/DATABASE.md); Find Tables only checked whether the whole table could be read. A table with some columns granted is now shown as **Some columns** (in the list, the table check and the Diagnostics report), and its granted columns are counted. A column that is not granted is marked *not granted* and is never asked for: the check reads the granted columns by name, never `*`.
+
 ## [1.3.0] - 2026-11-22
 
 ### Added

@@ -164,3 +164,13 @@ INSERT INTO workflow_nodeinstance VALUES
 -- (att_leave.workflowinstance_ptr_id), and each approval stage belongs to one.
 ALTER TABLE att_leave ADD CONSTRAINT att_leave_workflowinstance_ptr_fk FOREIGN KEY (workflowinstance_ptr_id) REFERENCES workflow_workflowinstance (id);
 ALTER TABLE workflow_nodeinstance ADD CONSTRAINT workflow_nodeinstance_instance_fk FOREIGN KEY (workflow_instance_id) REFERENCES workflow_workflowinstance (id);
+
+-- auth_user holds password hashes: the portal's user may read only these eight columns
+-- (docs/DATABASE.md), as on a real server (Find Tables shows it as "some columns", 1.3.1).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'joomla_portal') THEN
+    REVOKE SELECT ON auth_user FROM joomla_portal;
+    GRANT SELECT (id, username, email, emp_pin, is_active, is_superuser, can_manage_all_dept, del_flag) ON auth_user TO joomla_portal;
+  END IF;
+END $$;
