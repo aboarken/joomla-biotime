@@ -3,6 +3,15 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-11-22
+
+### Added
+- **Find Tables** (Components → ZKBioTime → Find Tables, super users only): find the tables of ZKBioTime's database and what they hold, like *Find Endpoints* in the ServiceDesk Plus portal. Read only, with the portal's read-only database user.
+  - **Diagnostics**: one click writes a report to copy into a support request: the portal's settings (no address, user or password), the connection (encrypted, read-only, tables it may change), each table the portal knows (found, readable, about how many rows), the codes this server stores for request and stage statuses, punch states, verification types and pay code types, how many days ZKBioTime calculated in the last 31 days, and the names of the other tables.
+  - **1. Tables**: the 32 tables the portal knows, with what they hold and which page reads them (plus the workflow tables the planned Leave Request will need), and every other table the database user can see; readable or not, and about how many rows (the database's own estimate, no row read). Search filter.
+  - **2. Check a table**: its columns and types (required or not), primary and foreign keys with a link to the table each key points to, the tables that point to it, how many rows it has, how often each column is filled (in up to 10,000 rows) and, for code columns only (status, type, state, flag…), which values are used and how often.
+  - No personal data is shown: names of tables and columns, types and counts only; values only for code columns, never a name, employee code, date or text. Table names are checked against the database's own catalogue. At most 60 runs per administrator and hour; every run is in the audit log.
+
 ## [1.2.9] - 2026-11-22
 
 ### Changed

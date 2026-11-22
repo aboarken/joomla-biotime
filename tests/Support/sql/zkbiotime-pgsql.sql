@@ -159,3 +159,8 @@ INSERT INTO workflow_nodeinstance VALUES
   (8, 'Head of Department', 1, 3, '2026-11-06 07:00+00', 'No cover', false, false, 1, 504, 900),
   -- As on a real server: an approved request whose stage row is still active, without a time (status 7).
   (9, 'Head of Department', 1, 7, NULL, NULL, true, false, NULL, 505, 900);
+
+-- Foreign keys as on a real ZKBioTime server (Find Tables, 1.3.0): a leave is a workflow instance
+-- (att_leave.workflowinstance_ptr_id), and each approval stage belongs to one.
+ALTER TABLE att_leave ADD CONSTRAINT att_leave_workflowinstance_ptr_fk FOREIGN KEY (workflowinstance_ptr_id) REFERENCES workflow_workflowinstance (id);
+ALTER TABLE workflow_nodeinstance ADD CONSTRAINT workflow_nodeinstance_instance_fk FOREIGN KEY (workflow_instance_id) REFERENCES workflow_workflowinstance (id);
