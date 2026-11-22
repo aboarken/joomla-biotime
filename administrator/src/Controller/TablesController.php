@@ -75,7 +75,7 @@ final class TablesController extends BaseController
         }
 
         $this->app->setUserState(self::STATE_LIST, ['tables' => $tables, 'at' => time()]);
-        $readable = \count(array_filter($tables, static fn (array $t): bool => $t['readable']));
+        $readable = \count(array_filter($tables, static fn (array $t): bool => $t['readable'] || $t['partial']));
         $this->audit(AuditLogInterface::RESULT_OK, 'list ' . $readable . '/' . \count($tables));
         $this->app->enqueueMessage(Text::sprintf('COM_BIOTIME_TABLES_FOUND', \count($tables), $readable), 'success');
         $this->setRedirect(Route::_(self::URL, false));
@@ -118,8 +118,8 @@ final class TablesController extends BaseController
         } else {
             $this->audit(AuditLogInterface::RESULT_OK, 'check ' . $name . ' columns ' . \count($result['columns']));
             $this->app->enqueueMessage(
-                $result['readable'] ? Text::sprintf('COM_BIOTIME_TABLES_CHECKED', \count($result['columns'])) : Text::_('COM_BIOTIME_TABLES_NOT_READABLE_MSG'),
-                $result['readable'] && $result['error'] === null ? 'success' : 'warning'
+                $result['readable'] || $result['partial'] ? Text::sprintf('COM_BIOTIME_TABLES_CHECKED', \count($result['columns'])) : Text::_('COM_BIOTIME_TABLES_NOT_READABLE_MSG'),
+                ($result['readable'] || $result['partial']) && $result['error'] === null ? 'success' : 'warning'
             );
         }
 

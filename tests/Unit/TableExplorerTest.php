@@ -86,6 +86,32 @@ final class TableExplorerTest extends TestCase
         self::assertSame(['iclock_transaction.punch_state' => [['0', 4], ['1', 1]]], $x->codeValues([['iclock_transaction', 'punch_state'], ['missing_table', 'status'], ['bad name', 'x']]));
     }
 
+    /**
+     * 1.3.1: auth_user holds password hashes, so only eight of its columns are granted
+     * (docs/DATABASE.md). It is "some columns", not "not readable"; only the granted columns are
+     * counted, and the password column is never read.
+     */
+    public function testATableWithSomeColumnsGrantedIsCountedOnThoseOnly(): void
+    {
+        $x = new TableExplorer($this->real());
+
+        $users = array_column($x->tables(), null, 'name')['auth_user'];
+        self::assertFalse($users['readable']);
+        self::assertTrue($users['partial']);
+        self::assertFalse(array_column($x->tables(), null, 'name')['att_leave']['partial'], 'a readable table is not partial');
+
+        $d       = $x->describe('auth_user');
+        $columns = array_column($d['columns'], null, 'name');
+        self::assertNull($d['error']);
+        self::assertGreaterThan(0, $d['rows']);
+        self::assertFalse($columns['password']['readable']);
+        self::assertNull($columns['password']['filled']);
+        self::assertNull($columns['password']['values']);
+        self::assertTrue($columns['username']['readable']);
+        self::assertSame($d['rows'], $columns['id']['filled']);
+        self::assertNotNull($columns['is_superuser']['values'], 'a granted true/false column lists its values');
+    }
+
     public function testDiagnosticsReportHoldsNoPersonalData(): void
     {
         $report = TableDiagnostics::run($this->real(), ['Component version' => '1.3.0'], new \DateTimeImmutable('2026-11-22 10:00', new \DateTimeZone('UTC')));
@@ -94,6 +120,7 @@ final class TableExplorerTest extends TestCase
         self::assertStringContainsString('Component version: 1.3.0', $report);
         self::assertStringContainsString('Safe for the portal: yes', $report);
         self::assertMatchesRegularExpression('/\[ok\]\s+att_leave\s/', $report);
+        self::assertMatchesRegularExpression('/\[some columns\]\s+auth_user\s/', $report);
         self::assertMatchesRegularExpression('/\[missing\]\s+workflow_workflownode\s.*Leave Request \(planned\)/', $report);
         self::assertStringContainsString('workflow_workflowinstance.approval_status: 1 ×3 · 2 ×2 · 3 ×1', $report);
 

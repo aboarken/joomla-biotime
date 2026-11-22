@@ -14,8 +14,9 @@ namespace BiotimePortal\Component\Biotime\Administrator\Database;
  * Find Tables (1.3.0): what ZKBioTime's database holds, to identify the tables a feature needs.
  * Read only, with the portal's own read-only database user.
  *
- *  - tables(): every table and view the user can see, whether it may be read, and about how many
- *    rows it has (the database's own estimate: no row is read).
+ *  - tables(): every table and view the user can see, whether it may be read (all columns, some
+ *    columns only, or none), and about how many rows it has (the database's own estimate: no row
+ *    is read).
  *  - describe(): one table's columns (type, empty allowed, primary key, the table and column a
  *    foreign key points to), the tables that point to it, how many rows it has, how often each
  *    column is filled, and the values of code columns (status, type, flag…) with how often each
@@ -50,7 +51,10 @@ final class TableExplorer
     }
 
     /**
-     * @return list<array{name: string, readable: bool, estimate: ?int}>
+     * readable: every column may be read; partial: only some columns may be read (1.3.1: e.g.
+     * auth_user, whose password column is never granted).
+     *
+     * @return list<array{name: string, readable: bool, partial: bool, estimate: ?int}>
      *
      * @throws DbException
      */
@@ -60,6 +64,7 @@ final class TableExplorer
             ? $this->q->rows(
                 "SELECT o.name AS name,
                         HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(o.schema_id)) + '.' + QUOTENAME(o.name), 'OBJECT', 'SELECT') AS readable,
+                        0 AS partial,
                         (SELECT SUM(p.rows) FROM sys.partitions p WHERE p.object_id = o.object_id AND p.index_id IN (0, 1)) AS estimate
                    FROM sys.objects o
                   WHERE o.type IN ('U', 'V') AND o.schema_id = SCHEMA_ID()
@@ -68,6 +73,7 @@ final class TableExplorer
             : $this->q->rows(
                 "SELECT c.relname AS name,
                         has_table_privilege(c.oid, 'SELECT') AS readable,
+                        has_any_column_privilege(c.oid, 'SELECT') AS partial,
                         CASE WHEN c.reltuples < 0 THEN NULL ELSE c.reltuples::bigint END AS estimate
                    FROM pg_class c
                    JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -78,6 +84,7 @@ final class TableExplorer
         return array_map(static fn (array $r): array => [
             'name'     => (string) $r['name'],
             'readable' => self::bool($r['readable']),
+            'partial'  => !self::bool($r['readable']) && self::bool($r['partial']),
             'estimate' => $r['estimate'] === null ? null : (int) $r['estimate'],
         ], $rows);
     }
@@ -88,11 +95,12 @@ final class TableExplorer
      * @return array{
      *     name: string,
      *     readable: bool,
+     *     partial: bool,
      *     estimate: ?int,
      *     rows: ?int,
      *     capped: bool,
      *     sample: int,
-     *     columns: list<array{name: string, type: string, nullable: bool, key: string, ref: string, filled: ?int, values: ?list<array{0: string, 1: int}>}>,
+     *     columns: list<array{name: string, type: string, nullable: bool, key: string, ref: string, readable: bool, filled: ?int, values: ?list<array{0: string, 1: int}>}>,
      *     referenced_by: list<array{table: string, column: string, to: string}>,
      *     error: ?string
      * }|null
@@ -122,7 +130,10 @@ final class TableExplorer
             $result['columns'][] = $c + ['filled' => null, 'values' => null];
         }
 
-        if (!$table['readable'] || $result['columns'] === []) {
+        // Only the columns the user may read are counted (all of them on a readable table).
+        $readable = array_values(array_filter($result['columns'], static fn (array $c): bool => $c['readable']));
+
+        if ((!$table['readable'] && !$table['partial']) || $readable === []) {
             return $result;
         }
 
@@ -136,16 +147,22 @@ final class TableExplorer
             $result['capped'] = $count > self::COUNT_CAP;
 
             $parts = [];
+            $names = [];
 
             foreach ($result['columns'] as $i => $c) {
-                $parts[] = 'COUNT(' . $this->quote($c['name']) . ') AS f' . $i;
+                if ($c['readable']) {
+                    $parts[] = 'COUNT(' . $this->quote($c['name']) . ') AS f' . $i;
+                    $names[] = $this->quote($c['name']);
+                }
             }
 
-            $filled           = $this->q->rows('SELECT COUNT(*) AS n, ' . implode(', ', $parts) . ' FROM (' . $this->limit('SELECT * FROM ' . $from, self::SAMPLE_ROWS) . ') s')[0] ?? [];
+            // The readable columns by name, never "*": a column the user may not read (a password
+            // hash) is not even asked for.
+            $filled           = $this->q->rows('SELECT COUNT(*) AS n, ' . implode(', ', $parts) . ' FROM (' . $this->limit('SELECT ' . implode(', ', $names) . ' FROM ' . $from, self::SAMPLE_ROWS) . ') s')[0] ?? [];
             $result['sample'] = (int) ($filled['n'] ?? 0);
 
             foreach ($result['columns'] as $i => &$c) {
-                $c['filled'] = isset($filled['f' . $i]) ? (int) $filled['f' . $i] : null;
+                $c['filled'] = $c['readable'] && isset($filled['f' . $i]) ? (int) $filled['f' . $i] : null;
             }
 
             unset($c);
@@ -153,7 +170,7 @@ final class TableExplorer
             $listed = 0;
 
             foreach ($result['columns'] as &$c) {
-                if ($listed >= self::MAX_CODE_COLUMNS || !self::codeLike($c['name'], $c['type'], $c['key'] !== '')) {
+                if ($listed >= self::MAX_CODE_COLUMNS || !$c['readable'] || !self::codeLike($c['name'], $c['type'], $c['key'] !== '')) {
                     continue;
                 }
 
@@ -261,7 +278,8 @@ final class TableExplorer
     private function pgsqlColumns(string $table): array
     {
         $columns = $this->q->rows(
-            "SELECT a.attname AS name, format_type(a.atttypid, a.atttypmod) AS type, NOT a.attnotnull AS nullable
+            "SELECT a.attname AS name, format_type(a.atttypid, a.atttypmod) AS type, NOT a.attnotnull AS nullable,
+                    has_column_privilege(a.attrelid, a.attnum, 'SELECT') AS can_read
                FROM pg_attribute a
                JOIN pg_class c ON c.oid = a.attrelid
                JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -324,7 +342,8 @@ final class TableExplorer
                     t.name + CASE WHEN t.name IN ('varchar', 'nvarchar', 'char', 'nchar')
                                   THEN '(' + CASE WHEN c.max_length = -1 THEN 'max' ELSE CAST(CASE WHEN t.name LIKE 'n%' THEN c.max_length / 2 ELSE c.max_length END AS varchar(10)) END + ')'
                                   ELSE '' END AS type,
-                    c.is_nullable AS nullable
+                    c.is_nullable AS nullable,
+                    HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME()) + '.' + QUOTENAME(OBJECT_NAME(c.object_id)), 'OBJECT', 'SELECT') AS can_read
                FROM sys.columns c
                JOIN sys.types t ON t.user_type_id = c.user_type_id
               WHERE c.object_id = OBJECT_ID(QUOTENAME(SCHEMA_NAME()) + '.' + QUOTENAME(:t))
@@ -373,7 +392,7 @@ final class TableExplorer
     /**
      * @param  list<array<string, mixed>>                       $columns
      * @param  list<array{kind: string, col: string, ref: string}> $keys
-     * @return list<array{name: string, type: string, nullable: bool, key: string, ref: string}>
+     * @return list<array{name: string, type: string, nullable: bool, key: string, ref: string, readable: bool}>
      */
     private static function withKeys(array $columns, array $keys): array
     {
@@ -397,6 +416,7 @@ final class TableExplorer
                 'nullable' => self::bool($c['nullable']),
                 'key'      => implode(', ', array_keys($kinds)),
                 'ref'      => $ref,
+                'readable' => self::bool($c['can_read'] ?? false),
             ];
         }
 

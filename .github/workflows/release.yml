@@ -88,7 +88,7 @@ jobs:
       # The component needs PHP 8.3 (script.php): lint and test with that version, not whatever
       # the runner image ships.
       - name: Set up PHP 8.3
-        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.37.2, pinned to the commit: this job may write releases
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0, pinned to the commit: this job may write releases
         with:
           php-version: '8.3'
           extensions: openssl, pdo_pgsql

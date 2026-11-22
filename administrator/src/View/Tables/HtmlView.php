@@ -23,7 +23,7 @@ use Joomla\CMS\Toolbar\ToolbarHelper;
  */
 final class HtmlView extends BaseHtmlView
 {
-    /** @var array{tables: list<array{name: string, readable: bool, estimate: ?int}>, at: int}|null */
+    /** @var array{tables: list<array{name: string, readable: bool, partial?: bool, estimate: ?int}>, at: int}|null */
     public ?array $list = null;
 
     /** @var array{table: string, result: ?array<string, mixed>, at?: int}|null */
@@ -72,7 +72,7 @@ final class HtmlView extends BaseHtmlView
      * The rows of step 1: the tables the portal knows first (found or not), then every other table
      * found by the last list, filtered by text.
      *
-     * @return list<array{name: string, section: string, summary: string, portal: string, planned: bool, known: bool, found: ?bool, readable: ?bool, estimate: ?int}>
+     * @return list<array{name: string, section: string, summary: string, portal: string, planned: bool, known: bool, found: ?bool, readable: ?bool, partial: bool, estimate: ?int}>
      */
     public function rows(): array
     {
@@ -90,13 +90,14 @@ final class HtmlView extends BaseHtmlView
                 'known'    => true,
                 'found'    => $this->list === null ? null : $f !== null,
                 'readable' => $f['readable'] ?? null,
+                'partial'  => (bool) ($f['partial'] ?? false),
                 'estimate' => $f['estimate'] ?? null,
             ];
             unset($found[$t['name']]);
         }
 
         foreach ($found as $t) {
-            $rows[] = ['name' => $t['name'], 'section' => '', 'summary' => '', 'portal' => '', 'planned' => false, 'known' => false, 'found' => true, 'readable' => $t['readable'], 'estimate' => $t['estimate']];
+            $rows[] = ['name' => $t['name'], 'section' => '', 'summary' => '', 'portal' => '', 'planned' => false, 'known' => false, 'found' => true, 'readable' => $t['readable'], 'partial' => (bool) ($t['partial'] ?? false), 'estimate' => $t['estimate']];
         }
 
         $needle = mb_strtolower($this->filter);

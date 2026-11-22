@@ -90,6 +90,9 @@ $at     = static fn (int $time): string => HTMLHelper::_('date', $time, Text::_(
                         <?php elseif ($r['readable']) : ?>
                             <span class="badge bg-success"><?php echo Text::_('COM_BIOTIME_TABLES_READABLE'); ?></span>
                             <?php echo $r['estimate'] !== null ? $e(Text::sprintf('COM_BIOTIME_TABLES_ABOUT_ROWS', number_format((int) $r['estimate']))) : ''; ?>
+                        <?php elseif ($r['partial']) : ?>
+                            <span class="badge bg-info text-dark"><?php echo Text::_('COM_BIOTIME_TABLES_PARTIAL'); ?></span>
+                            <?php echo $r['estimate'] !== null ? $e(Text::sprintf('COM_BIOTIME_TABLES_ABOUT_ROWS', number_format((int) $r['estimate']))) : ''; ?>
                         <?php else : ?>
                             <span class="badge bg-warning text-dark"><?php echo Text::_('COM_BIOTIME_TABLES_NOT_READABLE'); ?></span>
                         <?php endif; ?>
@@ -128,7 +131,9 @@ $at     = static fn (int $time): string => HTMLHelper::_('date', $time, Text::_(
             · <?php echo $e(Text::plural('COM_BIOTIME_TABLES_N_COLUMNS', count($result['columns']))); ?>
         </h3>
 
-        <?php if (!$result['readable']) : ?>
+        <?php if (!$result['readable'] && !empty($result['partial'])) : ?>
+            <div class="alert alert-info"><?php echo Text::_('COM_BIOTIME_TABLES_PARTIAL_MSG'); ?></div>
+        <?php elseif (!$result['readable']) : ?>
             <div class="alert alert-warning"><?php echo Text::_('COM_BIOTIME_TABLES_NOT_READABLE_MSG'); ?></div>
         <?php elseif ($result['error'] !== null) : ?>
             <div class="alert alert-warning"><?php echo Text::_('COM_BIOTIME_TABLES_ROWS_FAILED'); ?> (<?php echo $e((string) $result['error']); ?>)</div>
@@ -152,7 +157,7 @@ $at     = static fn (int $time): string => HTMLHelper::_('date', $time, Text::_(
                         <td class="small"><?php echo $e($c['type']); ?><?php echo $c['nullable'] ? '' : ' <span class="text-muted">' . Text::_('COM_BIOTIME_TABLES_REQUIRED') . '</span>'; ?></td>
                         <td class="small"><?php echo $c['key'] !== '' ? '<span class="badge bg-primary">' . $e($c['key']) . '</span>' : ''; ?></td>
                         <td class="small"><?php if ($c['ref'] !== '') : ?><a href="<?php echo Route::_('index.php?option=com_biotime&view=tables&' . http_build_query(['use' => strtok($c['ref'], '.')])); ?>#bt-check"><code><?php echo $e($c['ref']); ?></code></a><?php endif; ?></td>
-                        <td class="small text-nowrap"><?php echo $c['filled'] === null ? '—' : $e($result['sample'] > 0 ? Text::sprintf('COM_BIOTIME_TABLES_FILLED_OF', number_format((int) $c['filled']), number_format((int) $result['sample']), (int) round(100 * $c['filled'] / $result['sample'])) : '0'); ?></td>
+                        <td class="small text-nowrap"><?php echo empty($c['readable']) && (!empty($result['partial']) || $result['readable']) ? '<span class="text-muted">' . Text::_('COM_BIOTIME_TABLES_COLUMN_HIDDEN') . '</span>' : ($c['filled'] === null ? '—' : $e($result['sample'] > 0 ? Text::sprintf('COM_BIOTIME_TABLES_FILLED_OF', number_format((int) $c['filled']), number_format((int) $result['sample']), (int) round(100 * $c['filled'] / $result['sample'])) : '0')); ?></td>
                         <td class="small"><?php echo $c['values'] === null ? '' : $e(implode(' · ', array_map(static fn (array $v): string => $v[0] . ' ×' . $v[1], $c['values']))); ?></td>
                     </tr>
                 <?php endforeach; ?>
