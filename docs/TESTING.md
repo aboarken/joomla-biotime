@@ -52,6 +52,9 @@ those releases.
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
 
+### 1.3.5 – Diagnostics at the end
+- [ ] Find Tables: the page shows *1. Tables*, *2. Check a table*, then *Diagnostics* last; after **Run Diagnostics** the page opens at the report.
+
 ### 1.3.4 – Diagnostics: download only
 - [ ] Find Tables → Run Diagnostics: only **Download report** under the report; it saves `biotime-diagnostics-<date>.txt`.
 

@@ -3,6 +3,11 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.5] - 2026-11-22
+
+### Changed
+- **Find Tables:** the Diagnostics section is at the end of the page, after *1. Tables* and *2. Check a table*.
+
 ## [1.3.4] - 2026-11-22
 
 ### Removed
