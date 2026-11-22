@@ -52,6 +52,11 @@ those releases.
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
 
+### 1.2.9 – My Attendance pages
+- [ ] My Attendance, From 01/08/2026 To 31/07/2027: the table shows 31 days with *Previous / Page 1 of 12 / Next* under it; Next goes to the following days and keeps the dates and the chosen card.
+- [ ] Choose a card (e.g. Late In): the list starts again at page 1 and has as many pages as needed.
+- [ ] A single month shows no pager.
+
 ### 1.2.8 – Every page opens at once while it updates
 - [ ] My Leaves and My Approvals: open, wait longer than the cache time, open again: the page appears at once with "Showing your data from … Updating…", then current data.
 - [ ] Manager Dashboard: open a department, wait longer than the cache time, open it again: same note, then current data. Filters, the date range and paging still work after the update.

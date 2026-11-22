@@ -179,6 +179,14 @@ $cards = [
                     </tbody>
                 </table>
             </div>
+            <?php // Pages of days (1.2.9), as on the Manager Dashboard. ?>
+            <?php if ($this->pages > 1) : ?>
+                <nav class="bt-pager" aria-label="<?php echo $e(Text::_('COM_BIOTIME_ATTENDANCE_PAGES')); ?>">
+                    <?php if ($this->page > 1) : ?><a class="bt-btn bt-btn--ghost" href="<?php echo $this->filterUrl($this->status, $this->page - 1); ?>#bt-records">&larr; <?php echo Text::_('COM_BIOTIME_MANAGER_PREV'); ?></a><?php endif; ?>
+                    <span><?php echo $e(Text::sprintf('COM_BIOTIME_MANAGER_PAGE_OF', $this->page, $this->pages)); ?></span>
+                    <?php if ($this->page < $this->pages) : ?><a class="bt-btn bt-btn--ghost" href="<?php echo $this->filterUrl($this->status, $this->page + 1); ?>#bt-records"><?php echo Text::_('COM_BIOTIME_MANAGER_NEXT'); ?> &rarr;</a><?php endif; ?>
+                </nav>
+            <?php endif; ?>
         <?php endif; ?>
     </section>
 </div>
