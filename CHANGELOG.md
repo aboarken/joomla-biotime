@@ -3,6 +3,14 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.2] - 2026-11-22
+
+### Fixed
+- **Find Tables → Diagnostics: "Copy report" did not copy.** The button only attached itself when its script ran before the page was ready; when Joomla loaded the script later, clicking did nothing. It now attaches however the script is loaded, copies the selected report in the click itself (on http:// and https:// pages), falls back to the browser's Clipboard API, and says whether it worked: *Copied to the clipboard.*, or, when the browser does not allow copying, leaves the report selected for Ctrl+C.
+
+### Added
+- **Download report**: saves the Diagnostics report as a text file (`biotime-diagnostics-<date>.txt`), which works even where the browser blocks the clipboard.
+
 ## [1.3.1] - 2026-11-22
 
 ### Fixed

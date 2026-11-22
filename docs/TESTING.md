@@ -52,6 +52,10 @@ those releases.
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
 
+### 1.3.2 – Diagnostics: copy and download
+- [ ] Find Tables → Run Diagnostics → **Copy report**: "Copied to the clipboard." appears; paste in a text editor: the whole report.
+- [ ] **Download report**: a file `biotime-diagnostics-<date>.txt` with the same report.
+
 ### 1.3.1 – Find Tables: some columns
 - [ ] Find Tables → Diagnostics: `auth_user` shows `[some columns]` (not NOT READABLE). In the list it has the *Some columns* badge.
 - [ ] Check `auth_user`: an info note explains the partial grant; `password` shows *not granted*; the other columns show how often they are filled.

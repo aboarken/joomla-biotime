@@ -39,7 +39,12 @@ $at     = static fn (int $time): string => HTMLHelper::_('date', $time, Text::_(
             <?php if ($diag !== null) : ?>
                 <label class="form-label mt-3" for="bt-diag-report"><?php echo Text::_('COM_BIOTIME_DIAG_REPORT'); ?></label>
                 <textarea class="form-control font-monospace small" id="bt-diag-report" rows="18" readonly><?php echo $e($diag['report']); ?></textarea>
-                <button class="btn btn-secondary mt-2" type="button" id="bt-diag-copy" data-done="<?php echo $e(Text::_('COM_BIOTIME_DIAG_COPIED')); ?>"><span class="icon-copy" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_COPY'); ?></button>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                    <button class="btn btn-secondary" type="button" id="bt-diag-copy" data-done="<?php echo $e(Text::_('COM_BIOTIME_DIAG_COPIED')); ?>" data-failed="<?php echo $e(Text::_('COM_BIOTIME_DIAG_COPY_FAILED')); ?>"><span class="icon-copy" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_COPY'); ?></button>
+                    <?php // 1.3.2: a text file, when the browser does not allow copying. ?>
+                    <button class="btn btn-outline-secondary" type="button" id="bt-diag-download" data-file="biotime-diagnostics-<?php echo gmdate('Ymd-Hi', (int) $diag['at']); ?>.txt"><span class="icon-download" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_DOWNLOAD'); ?></button>
+                    <span class="small" id="bt-diag-status" role="status" aria-live="polite"></span>
+                </div>
                 <p class="small text-muted mt-2 mb-0"><?php echo Text::_('COM_BIOTIME_DIAG_PRIVACY'); ?></p>
             <?php endif; ?>
         </div>
