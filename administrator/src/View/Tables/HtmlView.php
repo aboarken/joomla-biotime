@@ -63,7 +63,6 @@ final class HtmlView extends BaseHtmlView
         $assets = $this->getDocument()->getWebAssetManager();
         $assets->getRegistry()->addExtensionRegistryFile('com_biotime');
         $assets->useStyle('com_biotime.admin');
-        $assets->useScript('com_biotime.admin');
 
         parent::display($tpl);
     }
