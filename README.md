@@ -96,15 +96,15 @@ page says so when the user's own Joomla time zone differs. Times are never shift
 - **Find Tables** (1.3.0): find the tables of ZKBioTime's database and what they hold, to check
   the portal's tables on a server or to identify the tables a new feature needs (like *Find
   Endpoints* in the ServiceDesk Plus portal). Read only, with the portal's read-only user.
-  - **Diagnostics**: one click writes a report to download (a text file) and attach to a support request: settings (no
-    address, user or password), connection (encrypted, read-only), each table the portal knows
-    (found, readable, about how many rows), the codes the server stores for statuses and punch
-    types, and how much ZKBioTime calculated recently.
   - **1. Tables**: the tables the portal knows, with what they hold and which page reads them,
     and every other table the database user can see; readable or not, about how many rows.
   - **2. Check a table**: its columns and types, primary and foreign keys (with links to the table
     each key points to), the tables that point to it, its row count, how often each column is
     filled and, for code columns only (status, type, flag…), which values are used and how often.
+  - **Diagnostics** (at the end of the page): one click writes a report to download (a text file) and attach to a support request: settings (no
+    address, user or password), connection (encrypted, read-only), each table the portal knows
+    (found, readable, about how many rows), the codes the server stores for statuses and punch
+    types, and how much ZKBioTime calculated recently.
   - Names, types and counts only: never a name, employee code, date or text of an employee.
     Super users only; at most 60 runs per hour; each run is in the audit log.
 

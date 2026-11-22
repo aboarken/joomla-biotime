@@ -24,34 +24,6 @@ $at     = static fn (int $time): string => HTMLHelper::_('date', $time, Text::_(
 <div class="biotime-tables">
     <p><?php echo Text::_('COM_BIOTIME_TABLES_INTRO'); ?></p>
 
-    <section class="card mb-4" id="bt-diag">
-        <div class="card-body">
-            <h2 class="h4 card-title"><?php echo Text::_('COM_BIOTIME_DIAG_TITLE'); ?></h2>
-            <p><?php echo Text::_('COM_BIOTIME_DIAG_INTRO'); ?></p>
-            <form method="post" action="<?php echo $action; ?>">
-                <input type="hidden" name="task" value="tables.diagnose">
-                <?php echo $token; ?>
-                <button class="btn btn-primary" type="submit"><span class="icon-wrench" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_RUN'); ?></button>
-                <?php if ($diag !== null) : ?>
-                    <span class="small text-muted ms-2"><?php echo Text::sprintf('COM_BIOTIME_TABLES_AT', $at((int) $diag['at'])); ?></span>
-                <?php endif; ?>
-            </form>
-            <?php if ($diag !== null) : ?>
-                <label class="form-label mt-3" for="bt-diag-report"><?php echo Text::_('COM_BIOTIME_DIAG_REPORT'); ?></label>
-                <textarea class="form-control font-monospace small" id="bt-diag-report" rows="18" readonly><?php echo $e($diag['report']); ?></textarea>
-                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                    <?php // A text file sent by the server (1.3.3; the only way since 1.3.4): needs no script. ?>
-                    <form method="post" action="<?php echo $action; ?>" class="d-inline">
-                        <input type="hidden" name="task" value="tables.download">
-                        <?php echo $token; ?>
-                        <button class="btn btn-outline-secondary" type="submit"><span class="icon-download" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_DOWNLOAD'); ?></button>
-                    </form>
-                </div>
-                <p class="small text-muted mt-2 mb-0"><?php echo Text::_('COM_BIOTIME_DIAG_PRIVACY'); ?></p>
-            <?php endif; ?>
-        </div>
-    </section>
-
     <h2 class="h4"><?php echo Text::_('COM_BIOTIME_TABLES_STEP1'); ?></h2>
     <p class="small text-muted"><?php echo Text::_('COM_BIOTIME_TABLES_STEP1_HELP'); ?></p>
     <form method="post" action="<?php echo $action; ?>" class="mb-3">
@@ -184,4 +156,33 @@ $at     = static fn (int $time): string => HTMLHelper::_('date', $time, Text::_(
         <?php endif; ?>
         <p class="small text-muted"><?php echo Text::_('COM_BIOTIME_TABLES_PRIVACY'); ?></p>
     <?php endif; ?>
+
+    <?php // Diagnostics at the end of the page (1.3.5). ?>
+    <section class="card mt-4 mb-4" id="bt-diag">
+        <div class="card-body">
+            <h2 class="h4 card-title"><?php echo Text::_('COM_BIOTIME_DIAG_TITLE'); ?></h2>
+            <p><?php echo Text::_('COM_BIOTIME_DIAG_INTRO'); ?></p>
+            <form method="post" action="<?php echo $action; ?>">
+                <input type="hidden" name="task" value="tables.diagnose">
+                <?php echo $token; ?>
+                <button class="btn btn-primary" type="submit"><span class="icon-wrench" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_RUN'); ?></button>
+                <?php if ($diag !== null) : ?>
+                    <span class="small text-muted ms-2"><?php echo Text::sprintf('COM_BIOTIME_TABLES_AT', $at((int) $diag['at'])); ?></span>
+                <?php endif; ?>
+            </form>
+            <?php if ($diag !== null) : ?>
+                <label class="form-label mt-3" for="bt-diag-report"><?php echo Text::_('COM_BIOTIME_DIAG_REPORT'); ?></label>
+                <textarea class="form-control font-monospace small" id="bt-diag-report" rows="18" readonly><?php echo $e($diag['report']); ?></textarea>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                    <?php // A text file sent by the server (1.3.3; the only way since 1.3.4): needs no script. ?>
+                    <form method="post" action="<?php echo $action; ?>" class="d-inline">
+                        <input type="hidden" name="task" value="tables.download">
+                        <?php echo $token; ?>
+                        <button class="btn btn-outline-secondary" type="submit"><span class="icon-download" aria-hidden="true"></span> <?php echo Text::_('COM_BIOTIME_DIAG_DOWNLOAD'); ?></button>
+                    </form>
+                </div>
+                <p class="small text-muted mt-2 mb-0"><?php echo Text::_('COM_BIOTIME_DIAG_PRIVACY'); ?></p>
+            <?php endif; ?>
+        </div>
+    </section>
 </div>
