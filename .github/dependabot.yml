@@ -1,0 +1,16 @@
+# Dependabot (security): keeps the GitHub Actions the release workflow uses up to date. They are
+# pinned to exact commits, so a new version arrives only as a pull request to review, never by
+# itself.
+#
+# The bundled PDF library (administrator/vendor, build/pdf/composer.lock) is not updated here: it
+# is refreshed with build/vendor-pdf.sh. Dependabot alerts still report a vulnerable version from
+# the lock file (Settings → Code security → Dependabot alerts).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
