@@ -96,7 +96,7 @@ page says so when the user's own Joomla time zone differs. Times are never shift
 - **Find Tables** (1.3.0): find the tables of ZKBioTime's database and what they hold, to check
   the portal's tables on a server or to identify the tables a new feature needs (like *Find
   Endpoints* in the ServiceDesk Plus portal). Read only, with the portal's read-only user.
-  - **Diagnostics**: one click writes a report to copy into a support request: settings (no
+  - **Diagnostics**: one click writes a report to download (a text file) and attach to a support request: settings (no
     address, user or password), connection (encrypted, read-only), each table the portal knows
     (found, readable, about how many rows), the codes the server stores for statuses and punch
     types, and how much ZKBioTime calculated recently.

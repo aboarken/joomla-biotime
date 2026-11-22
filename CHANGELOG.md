@@ -3,6 +3,11 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.4] - 2026-11-22
+
+### Removed
+- **Find Tables → Diagnostics: Copy report.** It never worked after an update: the installer script still listed `media/com_biotime/js/admin.js` as a file of a removed feature (Find Endpoints, 1.0.0) and deleted it on every update, so the button had no script. *Download report* (sent by the server, 1.3.3) is the way to take the report; the script is no longer shipped, and the leftover copy is deleted on update.
+
 ## [1.3.3] - 2026-11-22
 
 ### Fixed

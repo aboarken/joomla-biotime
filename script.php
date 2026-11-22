@@ -78,7 +78,8 @@ return new class () implements ServiceProviderInterface {
 
                 /** Media files (media/com_biotime) of removed features. */
                 private const OBSOLETE_MEDIA = [
-                    // 1.0.0: only Find Endpoints used it.
+                    // 1.0.0: only Find Endpoints used it. 1.3.4: again unused (Find Tables' Copy report
+                    // was removed); this also deletes the copy that 1.3.0 – 1.3.3 installed.
                     'js/admin.js',
                 ];
 
