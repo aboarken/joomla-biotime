@@ -1,10 +1,11 @@
 /**
- * Find Tables (1.3.0): copy the Diagnostics report to the clipboard, or download it as a text file.
+ * Find Tables (1.3.0): copy the Diagnostics report to the clipboard. (Download report is a normal
+ * form, sent by the server: it needs no script, 1.3.3.)
  *
  * 1.3.2: copying works however the page loads this script (before or after the page is ready),
  * and in every browser setting: the selected report is copied in the click itself; when the
  * browser refuses that, its Clipboard API is tried. The button says whether it worked; when it
- * did not, the report stays selected for Ctrl+C. "Download report" needs no clipboard at all.
+ * did not, the report stays selected for Ctrl+C.
  *
  * @license GNU General Public License version 2 or later
  */
@@ -13,7 +14,6 @@
 
   const start = () => {
     const copy = document.getElementById('bt-diag-copy');
-    const download = document.getElementById('bt-diag-download');
     const report = document.getElementById('bt-diag-report');
     const status = document.getElementById('bt-diag-status');
 
@@ -69,19 +69,6 @@
         }
 
         say(copy.dataset.failed, false);
-      });
-    }
-
-    if (download) {
-      download.addEventListener('click', () => {
-        const blob = new Blob([report.value], { type: 'text/plain;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = download.dataset.file || 'biotime-diagnostics.txt';
-        document.body.append(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
       });
     }
   };

@@ -349,7 +349,9 @@ Passwords and personal data are never written to it. With *Detailed logging* off
 - Every change goes through a pull request; the maintainer merges.
 - Tests: `composer install`, then `vendor/bin/phpunit` (no ZKBioTime server needed). The live
   checklist for the real server: [docs/TESTING.md](docs/TESTING.md).
-- Each version: bump `<version>` in `biotime.xml` and `media/joomla.asset.json`, add
+- Each version: bump `<version>` in `biotime.xml` and **every** `"version"` in
+  `media/joomla.asset.json` (the file's and each asset's: it is in each file's address, so
+  browsers load the new files after an update; a test and `build/verify-package.py` check it), add
   `administrator/sql/updates/{mysql,postgresql}/<version>.sql` (a comment when nothing changes),
   add a `CHANGELOG.md` entry and `docs/release-notes/<version>.md`.
 

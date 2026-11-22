@@ -7,6 +7,7 @@ Checks: no development files (tests, vendor, docs, build), manifest at the root,
 manifest names exists, SQL install/update files exist (including one for this version), the
 installer script and service provider exist, and the version matches when one is given.
 """
+import json
 import os
 import sys
 import tempfile
@@ -81,6 +82,21 @@ def main() -> int:
                   'administrator/vendor/mpdf/mpdf/ttfonts/DejaVuSansCondensed.ttf', 'administrator/vendor/setasign/fpdi/src/FpdiTrait.php'):
             if not os.path.isfile(os.path.join(d, f)):
                 errors.append(f'missing PDF library file {f}')
+
+        # 1.3.3: every asset carries the component version, so its address (file.js?1.3.3) changes
+        # with each release. Joomla's extension update does not renew its media version, and
+        # browsers would keep the previous release's scripts and styles.
+        assets_path = os.path.join(d, 'media', 'joomla.asset.json')
+        try:
+            with open(assets_path, encoding='utf-8') as fh:
+                assets = json.load(fh)
+            if assets.get('version') != version:
+                errors.append(f'media/joomla.asset.json version {assets.get("version")} does not match {version}')
+            for a in assets.get('assets', []):
+                if a.get('version') != version:
+                    errors.append(f'asset {a.get("name")} ({a.get("type")}) has version {a.get("version")!r}, expected {version}')
+        except (OSError, ValueError) as e:
+            errors.append(f'media/joomla.asset.json unreadable: {e}')
 
         if not os.path.isfile(os.path.join(d, 'administrator/services/provider.php')):
             errors.append('missing administrator/services/provider.php')

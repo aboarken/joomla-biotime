@@ -1,14 +1,15 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_biotime",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "ZKBioTime attendance portal assets",
   "license": "GPL-2.0-or-later",
   "assets": [
     {
       "name": "com_biotime.admin",
       "type": "style",
-      "uri": "com_biotime/admin.css"
+      "uri": "com_biotime/admin.css",
+      "version": "1.3.3"
     },
     {
       "name": "com_biotime.admin",
@@ -16,12 +17,14 @@
       "uri": "com_biotime/admin.js",
       "attributes": {
         "defer": true
-      }
+      },
+      "version": "1.3.3"
     },
     {
       "name": "com_biotime.portal",
       "type": "style",
-      "uri": "com_biotime/portal.css"
+      "uri": "com_biotime/portal.css",
+      "version": "1.3.3"
     },
     {
       "name": "com_biotime.filters",
@@ -29,7 +32,8 @@
       "uri": "com_biotime/filters.js",
       "attributes": {
         "defer": true
-      }
+      },
+      "version": "1.3.3"
     },
     {
       "name": "com_biotime.datepicker",
@@ -37,7 +41,8 @@
       "uri": "com_biotime/datepicker.js",
       "attributes": {
         "defer": true
-      }
+      },
+      "version": "1.3.3"
     },
     {
       "name": "com_biotime.report",
@@ -45,7 +50,8 @@
       "uri": "com_biotime/report.js",
       "attributes": {
         "defer": true
-      }
+      },
+      "version": "1.3.3"
     },
     {
       "name": "com_biotime.refresh",
@@ -56,7 +62,8 @@
       ],
       "attributes": {
         "defer": true
-      }
+      },
+      "version": "1.3.3"
     }
   ]
 }
