@@ -294,6 +294,11 @@ Database reads per page load, for one month (cold cache; a warm cache reads **no
 The whole component was audited at 1.0.17 (structure and security); the findings and what was
 changed are in [docs/AUDIT.md](docs/AUDIT.md).
 
+To report a security problem, see [SECURITY.md](SECURITY.md) (privately, through the repository's
+**Security** tab; never in a public issue). The release workflow's actions are pinned to exact
+commits and kept up to date by Dependabot (`.github/dependabot.yml`); changes to the workflow, the
+build scripts and the bundled library are reviewed by the code owner (`.github/CODEOWNERS`).
+
 - The administrator pages (settings, user mappings, diagnostics) need **Super User** rights
   (`core.admin` on the component), for every task, not only the page itself (0.4.7).
 - When the database server, *Connect via*, database or user changes, the stored password must be
