@@ -13,6 +13,7 @@ use BiotimePortal\Component\Biotime\Administrator\Settings\ValidationFailed;
 use BiotimePortal\Component\Biotime\Site\View\Manager\PdfReport;
 use BiotimePortal\Component\Biotime\Site\View\Manager\ReportPage;
 use BiotimePortal\Component\Biotime\Site\View\Manager\ReportColumns;
+use BiotimePortal\Component\Biotime\Site\View\Manager\TeamLimit;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -161,5 +162,25 @@ final class ReportTest extends TestCase
         self::assertSame('Attendance report 2026-11-01 - 2026-11-30.pdf', PdfReport::fileName('Attendance report 2026-11-01 - 2026-11-30'));
         self::assertSame('School A - report.pdf', PdfReport::fileName("School \"A\"/\\ - report\r\n"), 'no quotes, slashes or line breaks');
         self::assertSame('Attendance report.pdf', PdfReport::fileName('///'));
+    }
+
+    /**
+     * 1.3.6: the Manager Dashboard's period may be a whole year; employees × days stays within
+     * 300 × 31, so a long period reads fewer employees at once.
+     */
+    public function testALongPeriodReadsFewerEmployeesAtOnce(): void
+    {
+        self::assertSame(300, TeamLimit::employees('2026-11-23', '2026-11-23'), 'one day');
+        self::assertSame(300, TeamLimit::employees('2026-10-01', '2026-10-31'), '31 days, as before');
+        self::assertSame(290, TeamLimit::employees('2026-10-01', '2026-11-01'), '32 days');
+        self::assertSame(103, TeamLimit::employees('2026-09-01', '2026-11-29'), '90 days');
+        self::assertSame(25, TeamLimit::employees('2026-08-01', '2027-07-31'), 'a school year');
+        self::assertSame(300, TeamLimit::employees('2026-11-23', '2026-11-01'), 'To before From counts one day');
+
+        // Every chunk of a year's report has at most 31 dates on A3 and 12 on A4.
+        $year = array_map(static fn (int $i): string => (new \DateTimeImmutable('2026-08-01'))->modify('+' . $i . ' days')->format('Y-m-d'), range(0, 364));
+        self::assertLessThanOrEqual(31, max(array_map('count', ReportColumns::of($year, 'a3'))));
+        self::assertLessThanOrEqual(12, max(array_map('count', ReportColumns::of($year, 'a4'))));
+        self::assertSame($year, array_merge(...ReportColumns::of($year, 'a3')));
     }
 }

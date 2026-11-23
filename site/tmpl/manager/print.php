@@ -128,7 +128,7 @@ $meta = [
                             <?php echo $e(Text::_($this->problem === 'nodepartment' ? 'COM_BIOTIME_MANAGER_NO_DEPARTMENT' : 'COM_BIOTIME_ERROR_' . strtoupper($this->problem))); ?>
                         </div>
                     <?php elseif ($this->tooMany > 0) : ?>
-                        <div class="bt-alert bt-tone-amber" role="status"><?php echo $e(Text::sprintf('COM_BIOTIME_MANAGER_TOO_MANY', $this->tooMany, $this::MAX_EMPLOYEES)); ?></div>
+                        <div class="bt-alert bt-tone-amber" role="status"><?php echo $e(Text::sprintf('COM_BIOTIME_MANAGER_TOO_MANY', $this->tooMany, $this->maxEmployees)); ?></div>
                     <?php else : ?>
                         <dl class="bt-report-meta">
                             <?php foreach ($meta as [$label, $value]) : ?>

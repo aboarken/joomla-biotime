@@ -105,7 +105,7 @@ $range = $this->from === $this->to ? $f->date($this->from) : $f->date($this->fro
         <?php endforeach; ?>
 
         <?php if ($this->tooMany > 0) : ?>
-            <div class="bt-alert bt-tone-amber" role="status"><?php echo $e(Text::sprintf('COM_BIOTIME_MANAGER_TOO_MANY', $this->tooMany, $this::MAX_EMPLOYEES)); ?></div>
+            <div class="bt-alert bt-tone-amber" role="status"><?php echo $e(Text::sprintf('COM_BIOTIME_MANAGER_TOO_MANY', $this->tooMany, $this->maxEmployees)); ?></div>
         <?php else : ?>
         <div class="bt-stats bt-stats--5">
             <?php foreach ($cards as [$label, $value, $tone, $filter]) :

@@ -85,7 +85,10 @@ class HtmlView extends BaseHtmlView
      * department, an employee or an Employee ID first. Keeps the page small enough for Joomla
      * (whose plugins scan the whole page) and quick to read.
      */
-    public const MAX_EMPLOYEES = 300;
+    public const MAX_EMPLOYEES = TeamLimit::EMPLOYEES;
+
+    /** How many employees this period lets the page read at once (TeamLimit, 1.3.6). */
+    public int $maxEmployees = self::MAX_EMPLOYEES;
 
     /** Employees per page of the table (1.0.4). */
     public const PAGE_SIZE = 50;
@@ -152,7 +155,9 @@ class HtmlView extends BaseHtmlView
                 $this->code      = $model->searchedCode();
                 $this->employees = $model->shownEmployees();
 
-                if (\count($this->employees) > self::MAX_EMPLOYEES) {
+                $this->maxEmployees = TeamLimit::employees($this->from, min($this->to, $this->today));
+
+                if (\count($this->employees) > $this->maxEmployees) {
                     $this->tooMany   = \count($this->employees);
                     $this->employees = [];
                 }
