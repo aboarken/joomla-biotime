@@ -20,6 +20,18 @@ With a PostgreSQL loaded with `tests/Support/sql/zkbiotime-pgsql.sql` and its re
 BIOTIME_TEST_PG='host:port:database:user:password' vendor/bin/phpunit
 ```
 
+To build that database (1.3.7), as a PostgreSQL superuser (test passwords only):
+
+```bash
+PGHOST=127.0.0.1 PGUSER=postgres PGPASSWORD='…' tests/Support/sql/setup-test-db.sh
+```
+
+```bash
+BIOTIME_TEST_PG='127.0.0.1:5432:biotime:joomla_portal:portal-pass-123' BIOTIME_TEST_PG_ADMIN='127.0.0.1:5432:biotime:postgres:…' vendor/bin/phpunit --fail-on-skipped
+```
+
+The GitHub workflow does the same with the runner's own PostgreSQL (SSL on), so no test is skipped there.
+
 | Area | Test file |
 |---|---|
 | AES-256-GCM encryption (round trip, context binding, tampering, wrong secret), secret source, rate limiter | `tests/Unit/SecurityTest.php` |
@@ -51,6 +63,16 @@ those releases.
 ### Before the first test
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
+
+### 1.3.7 – Audit fixes
+- [ ] User Mappings: a user whose row is *Not found* (e.g. a code typed into an editable profile field) cannot be confirmed (message: nothing to confirm); a *Waiting for approval* row still confirms.
+- [ ] Manager Dashboard → Export PDF (A4/A3) still downloads. Copy the link, open it in another tab after logging out and in again: "This report link has expired…" (403).
+- [ ] An employee on leave whose ZKBioTime leave type has a non-English or custom name: the day shows that leave name, not Absent.
+- [ ] Stop ZKBioTime's database (or block it): My Leaves, My Approvals and the Manager Dashboard show "could not be reached", not `COM_BIOTIME_ERROR_…`.
+- [ ] Integration Settings: choose YYYY-MM-DD, update the component: the date format stays YYYY-MM-DD.
+- [ ] `index.php?option=com_biotime&view=day&date=2099-01-01` shows "not found" (no future month read).
+- [ ] Save Integration Settings after changing e.g. the cache time: the audit log row lists `changed: cache_minutes` (no values).
+- [ ] Manager Dashboard for a large department: the log line shows far fewer queries on Joomla's database than before.
 
 ### 1.3.6 – Manager Dashboard: up to a year
 - [ ] Manager Dashboard, From 01/08/2026 To today (more than 31 days): the table shows every date (scroll sideways), the cards count the whole period.

@@ -58,8 +58,13 @@ class Query
     {
         // Defence in depth (1.0.10): the session is read-only anyway, but a WITH may not carry a
         // data-changing statement, and nothing that writes or changes settings is sent at all.
-        if (!preg_match('/^\s*(SELECT|SHOW|WITH)\b/i', $sql) || preg_match('/;\s*\S/', $sql)
-            || preg_match('/\b(INSERT|UPDATE|DELETE|MERGE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|COPY|SET|CALL|DO|LOCK|VACUUM)\b/i', self::withoutLiterals($sql))) {
+        // 1.3.7 (audit): also no function that changes settings or the server (set_config,
+        // pg_terminate_backend, large objects, dblink, server files), and no comments.
+        $code = self::withoutLiterals($sql);
+
+        if (!preg_match('/^\s*(SELECT|SHOW|WITH)\b/i', $sql) || preg_match('/;\s*\S/', $sql) || preg_match('~--|/\*~', $code)
+            || preg_match('/\b(INSERT|UPDATE|DELETE|MERGE|TRUNCATE|ALTER|DROP|CREATE|GRANT|REVOKE|COPY|SET|CALL|DO|LOCK|VACUUM)\b/i', $code)
+            || preg_match('/\b(set_config|pg_terminate_backend|pg_cancel_backend|pg_reload_conf|pg_rotate_logfile|pg_read_(binary_)?file|pg_ls_dir|lo_\w+|dblink\w*|nextval|setval|pg_advisory\w*)\s*\(/i', $code)) {
             throw new \LogicException('Only single SELECT statements may be run');
         }
 

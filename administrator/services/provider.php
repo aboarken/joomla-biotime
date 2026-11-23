@@ -150,7 +150,8 @@ return new class () implements ServiceProviderInterface {
             )
         );
 
-        // The ZKBioTime server's time zone: times are shown as recorded, never shifted.
+        // The ZKBioTime server's time zone: times are shown as recorded, never shifted. The readers
+        // use the same zone as AttendanceService (1.3.7: an older alias no longer turned into UTC).
         $zone = static function (Container $c): \DateTimeZone {
             $zone = $c->get(SettingsRepository::class)->load()->serverTimezone() ?: (string) Factory::getApplication()->get('offset', 'UTC');
 
@@ -161,16 +162,21 @@ return new class () implements ServiceProviderInterface {
             }
         };
 
+        // The zone name for PostgreSQL's AT TIME ZONE: a named zone (including older aliases PHP still
+        // accepts, e.g. Asia/Calcutta, 1.3.7), never a numeric offset such as "+03:00", whose sign
+        // PostgreSQL reads the other way round (POSIX); UTC otherwise.
+        $dbZone = static fn (string $name): string => preg_match('~^[A-Za-z]+(?:[/_-][A-Za-z0-9+_-]+)*$~', $name) ? $name : 'UTC';
+
         // Attendance from ZKBioTime's database: one reader, and at most one connection, per page
         // load (the connection opens when first needed).
         $container->share(
             AttendanceReader::class,
-            static function (Container $c) use ($zone): AttendanceReader {
+            static function (Container $c) use ($zone, $dbZone): AttendanceReader {
                 $zoneName = $zone($c)->getName();
 
                 return new AttendanceReader(
                     static fn (): Query => $c->get(Query::class),
-                    \in_array($zoneName, \DateTimeZone::listIdentifiers(), true) ? $zoneName : 'UTC',
+                    $dbZone($zoneName),
                     $c->get(SettingsRepository::class)->load()->dbDurationUnit()
                 );
             }
@@ -179,10 +185,10 @@ return new class () implements ServiceProviderInterface {
         // My Leaves and My Approvals (1.1.0): leave requests and their stages, in the server's time zone.
         $container->share(
             LeaveReader::class,
-            static function (Container $c) use ($zone): LeaveReader {
+            static function (Container $c) use ($zone, $dbZone): LeaveReader {
                 $zoneName = $zone($c)->getName();
 
-                return new LeaveReader(static fn (): Query => $c->get(Query::class), \in_array($zoneName, \DateTimeZone::listIdentifiers(), true) ? $zoneName : 'UTC');
+                return new LeaveReader(static fn (): Query => $c->get(Query::class), $dbZone($zoneName));
             }
         );
 

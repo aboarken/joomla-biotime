@@ -28,7 +28,7 @@ final class DbConnector
      */
     public function __construct(?\Closure $pdo = null, ?\Closure $loaded = null)
     {
-        $this->pdo    = $pdo ?? static fn (string $dsn, string $user, string $password, array $options): \PDO => new \PDO($dsn, $user, $password, $options);
+        $this->pdo    = $pdo ?? static fn (string $dsn, string $user, #[\SensitiveParameter] string $password, array $options): \PDO => new \PDO($dsn, $user, $password, $options);
         $this->loaded = $loaded ?? static fn (string $extension): bool => \extension_loaded($extension);
     }
 

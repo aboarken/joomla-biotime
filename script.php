@@ -28,6 +28,9 @@ return new class () implements ServiceProviderInterface {
                 private const MIN_PHP    = '8.3.0';
                 private const MIN_JOOMLA = '6.0.0';
 
+                /** The version installed before this update ('' on a new install or when unknown, 1.3.7). */
+                private string $fromVersion = '';
+
                 /**
                  * Files and folders shipped by older versions that no longer exist.
                  * Joomla's upgrade does not delete them, so they are removed here.
@@ -115,6 +118,17 @@ return new class () implements ServiceProviderInterface {
 
                 public function uninstall(InstallerAdapter $adapter): bool
                 {
+                    // The PDF report's temporary files (1.3.7: the folder was left behind).
+                    try {
+                        $tmp = rtrim((string) Factory::getApplication()->get('tmp_path', JPATH_ROOT . '/tmp'), '/\\') . '/com_biotime_pdf';
+
+                        if (is_dir($tmp)) {
+                            Folder::delete($tmp);
+                        }
+                    } catch (\Throwable) {
+                        // Not critical: Joomla's tmp folder can be emptied by hand.
+                    }
+
                     return true;
                 }
 
@@ -136,6 +150,10 @@ return new class () implements ServiceProviderInterface {
                         $app->enqueueMessage(Text::sprintf('COM_BIOTIME_INSTALL_MIN_JOOMLA', self::MIN_JOOMLA), 'error');
 
                         return false;
+                    }
+
+                    if ($type === 'update') {
+                        $this->fromVersion = $this->installedVersion();
                     }
 
                     if (!\extension_loaded('openssl') || !\in_array('aes-256-gcm', openssl_get_cipher_methods(), true)) {
@@ -165,7 +183,11 @@ return new class () implements ServiceProviderInterface {
 
                     $renamed = $this->renameDevicesMenuItems($db);
                     $this->copyDevicesPermission($db);
-                    $this->switchDateFormat($db);
+                    // Once, when coming from before 0.4.2 (1.3.7 audit: it ran on every update and
+                    // turned a chosen YYYY-MM-DD back into DD/MM/YYYY).
+                    if ($this->fromVersion !== '' && version_compare($this->fromVersion, '0.4.2', '<')) {
+                        $this->switchDateFormat($db);
+                    }
                     $trashed = $this->trashObsoleteMenuItems($db);
                     $this->deleteObsoleteSettings($db);
 
@@ -307,6 +329,26 @@ return new class () implements ServiceProviderInterface {
                         )->execute();
                     } catch (\Throwable) {
                         // Not critical: the permission can be set again under Options.
+                    }
+                }
+
+                /** The installed com_biotime version, from Joomla's extension record; '' when unknown. */
+                private function installedVersion(): string
+                {
+                    try {
+                        $db    = Factory::getContainer()->get(DatabaseInterface::class);
+                        $cache = $db->setQuery(
+                            $db->createQuery()
+                                ->select($db->quoteName('manifest_cache'))
+                                ->from($db->quoteName('#__extensions'))
+                                ->where($db->quoteName('element') . ' = ' . $db->quote('com_biotime'))
+                                ->where($db->quoteName('type') . ' = ' . $db->quote('component'))
+                        )->loadResult();
+                        $version = json_decode((string) $cache, true)['version'] ?? '';
+
+                        return \is_string($version) && preg_match('/^\d+\.\d+\.\d+$/', $version) ? $version : '';
+                    } catch (\Throwable) {
+                        return '';
                     }
                 }
 

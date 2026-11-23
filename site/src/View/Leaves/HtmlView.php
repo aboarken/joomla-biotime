@@ -11,6 +11,7 @@ namespace BiotimePortal\Component\Biotime\Site\View\Leaves;
 // phpcs:enable PSR1.Files.SideEffects
 
 use BiotimePortal\Component\Biotime\Administrator\Database\DbException;
+use BiotimePortal\Component\Biotime\Administrator\Support\SourceException;
 use BiotimePortal\Component\Biotime\Administrator\Database\LeaveReader;
 use BiotimePortal\Component\Biotime\Site\Model\LeavesModel;
 use BiotimePortal\Component\Biotime\Site\View\PortalViewTrait;
@@ -38,7 +39,8 @@ final class HtmlView extends BaseHtmlView
         try {
             $this->requests = $model->requests();
         } catch (DbException $e) {
-            $this->problem = $e->getKind() === DbException::QUERY ? 'notgranted' : $e->getKind();
+            // A message the site has (1.3.7: the raw kind, e.g. "unreachable", had none).
+            $this->problem = $e->getKind() === DbException::QUERY ? 'notgranted' : SourceException::kindOf($e);
             $model->logger()->warning('My Leaves: leave requests could not be read (' . $e->getKind() . ($e->getKind() === DbException::QUERY
                 ? '; grant SELECT on att_leave, att_paycode, workflow_workflowinstance, workflow_nodeinstance to the portal\'s database user, see docs/DATABASE.md' : '') . ')');
         }

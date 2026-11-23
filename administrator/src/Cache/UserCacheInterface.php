@@ -27,6 +27,14 @@ interface UserCacheInterface
     public function get(Identity $identity, string $key, bool $stale = true): ?array;
 
     /**
+     * Several entries at once (1.3.7), as get() would return each one.
+     *
+     * @param  list<array{0: Identity, 1: string}> $items
+     * @return list<array<mixed>|null> in the order of $items
+     */
+    public function getMany(array $items, bool $stale = true): array;
+
+    /**
      * @param array<mixed> $value
      * @param int|null     $ttl   seconds to keep it instead of the cache time (e.g. a day for past
      *                            months, which no longer change); ignored when the cache is off

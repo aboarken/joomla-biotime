@@ -306,7 +306,8 @@ final class ManagerModel extends PortalModel
         $start   = new \DateTimeImmutable($from);
         $end     = new \DateTimeImmutable($to);
         $as      = static fn (array $e): Identity => Identity::matched($user, (string) $e['id'], $e['emp_code']);
-        $toRead  = $cache ? array_values(array_filter($employees, fn (array $e): bool => !$this->attendance()->isCached($as($e), $start, $end))) : $employees;
+        // Which employees are not all in the cache: one look-up for the whole team (1.3.7).
+        $toRead  = $cache ? array_map(static fn (int $n): array => $employees[$n], $this->attendance()->uncached(array_map($as, $employees), $start, $end)) : $employees;
 
         // Everyone's rows in a few queries instead of about fifteen per employee and month.
         if ($toRead !== []) {

@@ -3,6 +3,38 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.7] - 2026-11-23
+
+Full repository audit (architecture, Joomla conventions, security, data layer, build and CI) at
+1.3.6: no Critical or High finding. The findings by severity, the fixes, the tests run and the
+remaining risks are in docs/AUDIT.md.
+
+### Security
+- **User Mappings → Confirm accepts only matches waiting for approval or suspended, for the same ZKBioTime employee.** A *Not found* row may hold an employee code the user typed into a profile field they can edit; matching refuses such a code, but Confirm would have mapped the user to that employee.
+- **Export PDF needs the dashboard's own link** (form token): another page can no longer make a manager's browser request reports and use up the hourly limit.
+- My Approvals never shows the list of requests waiting for the approver from a copy older than the cache time (it depends on the approver's current role).
+- The read-only SQL guard also refuses functions that change settings or the server (`set_config`, `pg_terminate_backend`, large objects, `dblink`, server files) and comments; the database user's grants remain the boundary.
+- The database password is marked `#[\SensitiveParameter]` (never in exception traces); the reload address without JavaScript can never point to another site (`/\host`); a report for an unmatched user gives 403 instead of a 500.
+- The audit log records which settings changed (names only, never values), invalid saves, failed Diagnostics and report downloads.
+
+### Fixed
+- **Leave days showed as Absent** when the leave type's name did not contain the English word "leave" (custom or Arabic names); every leave pay code of ZKBioTime is now recognised, and the older builds' leave flag is used. Cached months are read again (cache version 5).
+- **"COM_BIOTIME_ERROR_…" instead of a message** on My Leaves, My Approvals and the Manager Dashboard when ZKBioTime's database could not be reached.
+- **Every update reset the date format** YYYY-MM-DD to DD/MM/YYYY; it now changes only when updating from before 0.4.2.
+- The Day page reads only dates from the portal's first year to today (a typed URL read and cached any month from 2000 to 2099).
+- A time zone alias (e.g. Asia/Calcutta) no longer becomes UTC in the database queries.
+- A profile not found is kept only for the cache time (it was kept a day), so a corrected employee code shows within minutes.
+- The attendance group is chosen the same way on every page (ORDER BY).
+- The PDF report's temporary folder is removed when the component is uninstalled.
+
+### Changed
+- **Manager Dashboard: one query on Joomla's database for the whole team's cache** (it was one per employee, month and type: hundreds per page).
+
+### Development
+- CI runs the queries against a real PostgreSQL with the portal's read-only user (`tests/Support/sql/setup-test-db.sh`, the runner's PostgreSQL with SSL; no test may be skipped), audits the dependencies (test tools and the bundled mPDF), and releases only from main after every PHP version passed. Dependabot also watches the test tools.
+- A test fails if the installer's list of obsolete files contains a file that is shipped (how `media/js/admin.js` was deleted after every update in 1.3.0 – 1.3.3).
+- README: Joomla 6.0 or later (as the installer checks; tested on 6.2). Outdated comments and the My Dashboard menu description corrected.
+
 ## [1.3.6] - 2026-11-23
 
 ### Changed

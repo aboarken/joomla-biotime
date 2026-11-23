@@ -102,13 +102,13 @@ final class BiotimeComponent extends MVCComponent implements RouterServiceInterf
         return $this->service(\BiotimePortal\Component\Biotime\Administrator\Cache\UserCacheInterface::class);
     }
 
-    /** Manager Dashboard: departments and employees (1.0.0). */
     /** My Leaves and My Approvals (1.1.0). */
     public function getLeaveReader(): \BiotimePortal\Component\Biotime\Administrator\Database\LeaveReader
     {
         return $this->service(\BiotimePortal\Component\Biotime\Administrator\Database\LeaveReader::class);
     }
 
+    /** Manager Dashboard: departments and employees (1.0.0). */
     public function getTeamReader(): \BiotimePortal\Component\Biotime\Administrator\Database\TeamReader
     {
         return $this->service(\BiotimePortal\Component\Biotime\Administrator\Database\TeamReader::class);

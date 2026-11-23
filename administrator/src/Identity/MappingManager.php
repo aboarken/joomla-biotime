@@ -43,7 +43,7 @@ final class MappingManager
      *
      * @throws MappingException|SourceException
      */
-    public function assign(int $joomlaUserId, string $joomlaEmail, string $empCode, int $actorId): array
+    public function assign(int $joomlaUserId, string $joomlaEmail, string $empCode, int $actorId, ?string $expectedEmployeeId = null): array
     {
         if ($joomlaUserId <= 0) {
             throw new MappingException('COM_BIOTIME_MAPPING_ERR_USER');
@@ -77,6 +77,13 @@ final class MappingManager
             EmployeeKeys::id($employeeId);
         } catch (\InvalidArgumentException) {
             throw new SourceException(SourceException::BAD_RESPONSE, 'Employee without a valid id');
+        }
+
+        // Confirm (1.3.7): only the employee the match found; if the code now names someone else, refuse.
+        if ($expectedEmployeeId !== null && $employeeId !== $expectedEmployeeId) {
+            $this->audit->record($joomlaUserId, 'mapping.assign', AuditLogInterface::RESULT_DENIED, 'employee_changed', $actorId);
+
+            throw new MappingException('COM_BIOTIME_MAPPING_ERR_CHANGED');
         }
 
         $owner = $this->repository->findByEmployeeId($employeeId);
@@ -117,11 +124,15 @@ final class MappingManager
     {
         $mapping = $this->repository->find($joomlaUserId);
 
-        if ($mapping === null || $mapping->empCode === null) {
+        // 1.3.7 (audit): only a match that was found and is waiting (or was suspended) can be confirmed,
+        // for the same employee. A "Not found" row may hold a code the user typed into their own
+        // profile field (refused by matching because they can edit it): never confirm that.
+        if ($mapping === null || $mapping->empCode === null || $mapping->employeeId === null
+            || !\in_array($mapping->status, [UserMapping::STATUS_PENDING, UserMapping::STATUS_SUSPENDED], true)) {
             throw new MappingException('COM_BIOTIME_MAPPING_ERR_NOTHING_TO_CONFIRM');
         }
 
-        return $this->assign($joomlaUserId, $joomlaEmail, $mapping->empCode, $actorId);
+        return $this->assign($joomlaUserId, $joomlaEmail, $mapping->empCode, $actorId, $mapping->employeeId);
     }
 
     /**

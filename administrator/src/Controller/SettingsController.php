@@ -42,14 +42,16 @@ final class SettingsController extends BaseController
         $data = $this->input->post->get('jform', [], 'array');
 
         try {
-            $this->model()->save($data);
+            $changed = $this->model()->save($data);
             $this->app->setUserState(self::STATE_KEY, null);
-            $this->component()->getAuditLog()->record($this->actorId(), 'settings.save', AuditLogInterface::RESULT_OK);
+            // Which settings changed (1.3.7 audit): names only, never a value.
+            $this->component()->getAuditLog()->record($this->actorId(), 'settings.save', AuditLogInterface::RESULT_OK, mb_substr('changed: ' . ($changed === [] ? 'none' : implode(',', $changed)), 0, 255));
             $this->app->enqueueMessage(Text::_('COM_BIOTIME_SETTINGS_SAVED'), 'success');
         } catch (ValidationFailed $e) {
             // Keep the entered values for the form, but never the password.
             unset($data['db_password']);
             $this->app->setUserState(self::STATE_KEY, $data);
+            $this->component()->getAuditLog()->record($this->actorId(), 'settings.save', AuditLogInterface::RESULT_DENIED, 'invalid');
 
             foreach ($e->getKeys() as $key) {
                 $this->app->enqueueMessage(Text::_($key), 'error');

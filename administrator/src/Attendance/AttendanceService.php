@@ -50,9 +50,10 @@ final class AttendanceService
     /**
      * Part of every database cache key. Raised whenever the rows read from the database change
      * shape (0.6.3: late-in and early-out from ZKBioTime 9.5's pay codes), so an update never shows
-     * months cached by an older version (past months are kept a day).
+     * months cached by an older version (past months are kept a day). 5 (1.3.7): every leave pay
+     * code is recognised, whatever its name.
      */
-    public const CACHE_VERSION = 4;
+    public const CACHE_VERSION = 5;
 
     /** The first year the portal offers (year lists, month navigation). */
     public const FIRST_YEAR = 2025;
@@ -130,7 +131,9 @@ final class AttendanceService
         }
 
         $profile = $emp === null ? null : ['department' => $emp['department'], 'position' => $emp['position'], 'hire_date' => $emp['hire_date'], 'name' => $emp['name'] ?? null];
-        $this->cache->set($identity, 'db:profile2', ['p' => $profile], self::PAST_MONTH_TTL);
+        // A profile not found (e.g. a code duplicated in ZKBioTime) is kept only for the cache time,
+        // so once corrected it shows within minutes, not a day (1.3.7).
+        $this->cache->set($identity, 'db:profile2', ['p' => $profile], $profile === null ? null : self::PAST_MONTH_TTL);
 
         return $profile;
     }
@@ -162,7 +165,7 @@ final class AttendanceService
             return [];
         }
 
-        $this->cache->set($identity, $key, ['d' => $devices], self::PAST_MONTH_TTL);
+        $this->cache->set($identity, $key, ['d' => $devices], $devices === [] ? null : self::PAST_MONTH_TTL);
 
         return $devices;
     }
@@ -197,28 +200,42 @@ final class AttendanceService
     }
 
     /**
-     * Whether every month of the range is in the cache for this employee (1.2.8, Manager
-     * Dashboard): only the employees who are not are then read ahead together. The entries looked
-     * up are kept for range(), which does not look them up again.
+     * The employees of $identities whose months are not all in the cache (1.3.7: looked up in one
+     * query for the whole team, not one per employee, month and type). The entries found are kept
+     * for range(), which does not look them up again.
+     *
+     * @param  list<Identity> $identities
+     * @return list<int> the positions in $identities of the employees to read from ZKBioTime
      */
-    public function isCached(Identity $identity, \DateTimeImmutable $from, \DateTimeImmutable $to): bool
+    public function uncached(array $identities, \DateTimeImmutable $from, \DateTimeImmutable $to): array
     {
-        $all = true;
+        $items = [];
+        $owner = [];
 
-        for ($m = $from->modify('first day of this month'); $m <= $to; $m = $m->modify('first day of next month')) {
-            foreach ([self::TYPE_PUNCHES, self::TYPE_DAILY] as $type) {
-                $key  = self::cacheKey($type, (int) $m->format('Y'), (int) $m->format('n'));
-                $peek = $this->peekKey($identity, $key);
-
-                $this->peek[$peek] ??= $this->cache->get($identity, $key);
-                $all = $all && $this->peek[$peek] !== null;
+        foreach ($identities as $n => $identity) {
+            for ($m = $from->modify('first day of this month'); $m <= $to; $m = $m->modify('first day of next month')) {
+                foreach ([self::TYPE_PUNCHES, self::TYPE_DAILY] as $type) {
+                    $items[] = [$identity, self::cacheKey($type, (int) $m->format('Y'), (int) $m->format('n'))];
+                    $owner[] = $n;
+                }
             }
         }
 
-        return $all;
+        $missing = [];
+
+        foreach ($this->cache->getMany($items) as $i => $value) {
+            [$identity, $key]                          = $items[$i];
+            $this->peek[$this->peekKey($identity, $key)] = $value;
+
+            if ($value === null) {
+                $missing[$owner[$i]] = true;
+            }
+        }
+
+        return array_keys($missing);
     }
 
-    /** The look-ups kept between isCached() and range() belong to one user and employee. */
+    /** The look-ups kept between uncached() and range() belong to one user and employee. */
     private function peekKey(Identity $identity, string $key): string
     {
         return $identity->joomlaUserId . '|' . ($identity->isMatched() ? $identity->empCode() : '') . '|' . $key;
@@ -245,7 +262,7 @@ final class AttendanceService
             foreach ([self::TYPE_PUNCHES, self::TYPE_DAILY] as $type) {
                 $key = $this->peekKey($identity, self::cacheKey($type, (int) $m->format('Y'), (int) $m->format('n')));
 
-                // Already looked up by isCached() (Manager Dashboard, 1.2.8), else now.
+                // Already looked up by uncached() (Manager Dashboard, 1.2.8/1.3.7), else now.
                 if (!\array_key_exists($key, $this->peek)) {
                     $this->peek[$key] = $this->cacheOn ? $this->cache->get($identity, self::cacheKey($type, (int) $m->format('Y'), (int) $m->format('n'))) : null;
                 }
@@ -348,9 +365,10 @@ final class AttendanceService
             if (!$punched && isset($row['holiday'])) {
                 // A holiday of ZKBioTime (for everyone, the department or the group): not absent.
                 [$status, $derived] = ['holiday', false];
-            } elseif (!$punched && isset($row['leave_name'])) {
-                // Leave as ZKBioTime calculated it (e.g. "Annual Leave"): shown by its name, not absent.
-                [$status, $derived, $raw] = ['other', false, (string) $row['leave_name']];
+            } elseif (!$punched && (isset($row['leave_name']) || !empty($row['leave']))) {
+                // Leave as ZKBioTime calculated it: shown by its name, not absent. The att_payloadbase
+                // build gives only a leave flag (1.3.7: it was read but not used).
+                [$status, $derived, $raw] = ['other', false, (string) ($row['leave_name'] ?? 'Leave')];
             } elseif (!$punched && !$weekend && !empty($row['off'])) {
                 // A day off in the employee's schedule.
                 [$status, $derived] = ['rest', false];

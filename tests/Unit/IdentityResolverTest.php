@@ -305,6 +305,43 @@ final class IdentityResolverTest extends TestCase
         self::assertTrue($this->resolver()->resolve(5, 'alice@example.com')->isMatched());
     }
 
+    /**
+     * 1.3.7 (audit): a code the user typed into a field they can edit is refused by matching and
+     * kept on a "Not found" row; Confirm must never turn it into a mapping.
+     */
+    public function testAUserTypedCodeOnANotFoundRowCannotBeConfirmed(): void
+    {
+        $this->fields->values[5] = 'E1';
+        $this->fields->editableBy[] = 5;
+        self::assertFalse($this->resolver()->resolve(5, 'mallory@example.com')->isMatched());
+        self::assertSame([UserMapping::STATUS_NOT_FOUND, 'E1', null], [$this->repo->find(5)?->status, $this->repo->find(5)?->empCode, $this->repo->find(5)?->employeeId]);
+
+        try {
+            (new MappingManager($this->repo, fn () => $this->directory(), $this->audit, fn () => $this->now))->confirm(5, 'mallory@example.com', 99);
+            self::fail('A typed code was confirmed');
+        } catch (MappingException $e) {
+            self::assertSame('COM_BIOTIME_MAPPING_ERR_NOTHING_TO_CONFIRM', $e->getMessage());
+        }
+
+        self::assertFalse($this->repo->find(5)?->isActive());
+    }
+
+    /** 1.3.7 (audit): a waiting match is confirmed only for the employee it found. */
+    public function testConfirmRefusesWhenTheCodeNowBelongsToAnotherEmployee(): void
+    {
+        $this->resolver()->resolve(5, 'alice@example.com');
+        $waiting = $this->repo->find(5);
+        self::assertSame(UserMapping::STATUS_PENDING, $waiting?->status);
+        $this->repo->save($waiting->with(['employeeId' => '999']));
+
+        try {
+            (new MappingManager($this->repo, fn () => $this->directory(), $this->audit, fn () => $this->now))->confirm(5, 'alice@example.com', 99);
+            self::fail('Confirmed for another employee');
+        } catch (MappingException $e) {
+            self::assertSame('COM_BIOTIME_MAPPING_ERR_CHANGED', $e->getMessage());
+        }
+    }
+
     /** A failed daily re-verification is not retried on every page load (each try waits for ZKBioTime's database). */
     public function testFailedReverificationIsRetriedAfterAnHourNotOnEveryPage(): void
     {

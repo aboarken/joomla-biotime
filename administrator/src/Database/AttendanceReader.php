@@ -116,7 +116,7 @@ final class AttendanceReader
         $group = null;
 
         try {
-            $group = $this->q()->value('SELECT group_id FROM att_attemployee WHERE emp_id = :id LIMIT 1', [':id' => (int) $row[0]['id']]);
+            $group = $this->q()->value('SELECT group_id FROM att_attemployee WHERE emp_id = :id ORDER BY id LIMIT 1', [':id' => (int) $row[0]['id']]);
         } catch (DbException) {
             // Attendance groups are optional (holidays per group only).
         }
@@ -334,7 +334,11 @@ final class AttendanceReader
                 $matches(self::PAY_CODES['absent'], $r['symbol'], $r['name'])  => $d['absent'] = true,
                 $matches(self::PAY_CODES['holiday'], $r['symbol'], $r['name']) => $d['holiday'] ??= 'Holiday',
                 $matches(self::PAY_CODES['weekend'], $r['symbol'], $r['name']) => $d['off'] = true,
-                str_contains(strtolower((string) $r['name']), 'leave')         => $d['leave_name'] = self::text($r['name']),
+                $matches(self::PAY_CODES['regular'], $r['symbol'], $r['name']) => null,
+                // Any other pay code with time is a leave type defined in ZKBioTime, whatever its
+                // name or language (1.3.7 audit: only names containing the English word "leave" were
+                // recognised, so e.g. "إجازة سنوية" showed as Absent). Used only on days without punches.
+                $minutes > 0 && self::text($r['name']) !== null                  => $d['leave_name'] ??= self::text($r['name']),
                 default                                                        => null,
             };
 
@@ -722,7 +726,7 @@ final class AttendanceReader
         }
 
         if ($ids !== []) {
-            foreach ($this->optional('SELECT emp_id, group_id FROM att_attemployee WHERE emp_id IN (' . implode(',', $ids) . ')', []) as $g) {
+            foreach ($this->optional('SELECT emp_id, group_id FROM att_attemployee WHERE emp_id IN (' . implode(',', $ids) . ') ORDER BY id', []) as $g) {
                 $groups[(int) $g['emp_id']] ??= $g['group_id'] !== null ? (int) $g['group_id'] : null;
             }
         }
@@ -744,7 +748,6 @@ final class AttendanceReader
 
         // Per-employee tables, one query each (ids are integers, written into the statement).
         $this->bulk = ['punches' => array_fill_keys($codes, [])];
-        $this->bulk['punches'] = array_fill_keys($codes, []);
 
         foreach ($this->q()->rows(self::sql('punches', "IN ({$in})"), $bind + $this->punchRange($from, $to)) as $r) {
             $this->bulk['punches'][(string) $r['emp_code']][] = $r;

@@ -81,6 +81,15 @@ final class DisplayController extends BaseController
             throw new NotAllowed(Text::_('COM_BIOTIME_NOT_AUTHORISED'), 403);
         }
 
+        $raw = $this->input->getCmd('format', 'html') !== 'html';
+
+        // The report (PDF or print page, 1.3.7 audit) reads the whole team without the cache and
+        // counts against the manager's hourly limit: only from the dashboard's own buttons, which
+        // carry the form token, never from a link or image on another page.
+        if ($view === 'manager' && \in_array($this->input->getCmd('layout', ''), ['print', 'pdf'], true) && !$this->checkToken('get', false)) {
+            throw new NotAllowed(Text::_('COM_BIOTIME_REPORT_EXPIRED'), 403);
+        }
+
         // A normal page load may open with older data; the update itself (bt_fresh) never does.
         $fresh = $this->input->getBool('bt_fresh', false);
         $cache = $this->biotime()->getUserCache();
@@ -89,6 +98,11 @@ final class DisplayController extends BaseController
         try {
             $identity = $this->currentIdentity();
         } catch (SourceException $e) {
+            // The report file or page has no "could not be matched" page of its own (1.3.7).
+            if ($raw) {
+                throw new NotAllowed(Text::_('COM_BIOTIME_NOT_AUTHORISED'), 403);
+            }
+
             $this->input->set('view', 'unmatched');
             $this->input->set('layout', 'unavailable');
             $this->input->set('kind', $e->getKind());
@@ -97,6 +111,10 @@ final class DisplayController extends BaseController
         }
 
         if (!$identity->isMatched()) {
+            if ($raw) {
+                throw new NotAllowed(Text::_('COM_BIOTIME_NOT_AUTHORISED'), 403);
+            }
+
             $this->input->set('view', 'unmatched');
             $this->input->set('layout', 'default');
         } elseif ($view !== 'manager' || !\in_array($this->input->getCmd('layout', 'default'), $this->input->getCmd('format', 'html') === 'html' ? ['print'] : ['print', 'pdf'], true)) {
@@ -123,7 +141,8 @@ final class DisplayController extends BaseController
     private function updateInBackground(int $since): void
     {
         // Path and query of this page on this site only: never a "//host" (protocol-relative) path.
-        $page = new Uri('/' . ltrim(Uri::getInstance()->toString(['path', 'query']), '/'));
+        // Never "//host" or "/\host" (both read as another site by browsers, 1.3.7).
+        $page = new Uri('/' . ltrim(Uri::getInstance()->toString(['path', 'query']), '/\\'));
         $page->setVar('bt_fresh', '1');
         $part = clone $page;
         $part->setVar('tmpl', 'component');

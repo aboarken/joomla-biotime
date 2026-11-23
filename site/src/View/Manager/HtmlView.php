@@ -14,6 +14,7 @@ use BiotimePortal\Component\Biotime\Administrator\Attendance\Day;
 use BiotimePortal\Component\Biotime\Administrator\Attendance\DayFilter;
 use BiotimePortal\Component\Biotime\Administrator\Attendance\Summary;
 use BiotimePortal\Component\Biotime\Administrator\Database\DbException;
+use BiotimePortal\Component\Biotime\Administrator\Support\SourceException;
 use BiotimePortal\Component\Biotime\Site\Model\ManagerModel;
 use BiotimePortal\Component\Biotime\Site\View\PortalViewTrait;
 use BiotimePortal\Component\Biotime\Site\View\Ui;
@@ -206,7 +207,8 @@ class HtmlView extends BaseHtmlView
                 }
             }
         } catch (DbException $e) {
-            $this->problem = $e->getKind();
+            // A message the site has (1.3.7: the raw kind, e.g. "unreachable", had none).
+            $this->problem = SourceException::kindOf($e);
             $model->logger()->warning('Manager Dashboard: the team could not be read (' . $e->getKind() . ')');
         }
 

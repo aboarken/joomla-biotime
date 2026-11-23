@@ -129,7 +129,11 @@ final class DatabaseTest extends TestCase
     {
         $q = new Query(null, 'pgsql');
 
-        foreach (['DELETE FROM iclock_transaction', 'SELECT 1; DROP TABLE x', 'update x set y = 1'] as $sql) {
+        // 1.3.7 (audit): also functions that change settings or the server, and comments.
+        foreach (['DELETE FROM iclock_transaction', 'SELECT 1; DROP TABLE x', 'update x set y = 1',
+                  "SELECT set_config('default_transaction_read_only', 'off', false)", 'SELECT pg_terminate_backend(123)',
+                  'SELECT lo_unlink(1)', "SELECT dblink('x', 'y')", "SELECT pg_read_file('/etc/passwd')",
+                  'SELECT 1 -- comment', 'SELECT /* x */ 1'] as $sql) {
             try {
                 $q->rows($sql);
                 self::fail('sent: ' . $sql);
@@ -137,6 +141,15 @@ final class DatabaseTest extends TestCase
                 self::assertStringContainsString('Only single SELECT', $e->getMessage());
             }
         }
+    }
+
+    /** The guard ignores the words inside string literals: a value may contain them. */
+    public function testWordsInsideLiteralsAreNotRefused(): void
+    {
+        $sqlite = new \PDO('sqlite::memory:');
+        $q      = new Query($sqlite, 'pgsql');
+
+        self::assertSame([['v' => 'set_config( -- delete']], $q->rows("SELECT 'set_config( -- delete' AS v"));
     }
 
     public function testInspectorReportsNamesAndPermissionsOnly(): void
