@@ -14,3 +14,12 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+  # The test tools (composer.json, development only; not part of the package). The bundled PDF
+  # library is refreshed with build/vendor-pdf.sh instead.
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies

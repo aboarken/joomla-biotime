@@ -191,15 +191,16 @@ abstract class PortalModel extends BaseModel
     /**
      * A list read from ZKBioTime, kept in the user's cache for the cache time (1.2.8: My Leaves,
      * My Approvals), so the page can open at once with the last data and update itself. A read
-     * error is never cached.
+     * error is never cached. $stale false: never a copy past the cache time (1.3.7: lists that
+     * depend on the user's current ZKBioTime role, e.g. the requests waiting for them).
      *
      * @param  \Closure(): list<array<string, mixed>> $read
      * @return list<array<string, mixed>>
      */
-    protected function cachedList(string $key, \Closure $read): array
+    protected function cachedList(string $key, \Closure $read, bool $stale = true): array
     {
         $cache  = $this->biotime()->getUserCache();
-        $cached = $cache->get($this->identity(), $key);
+        $cached = $cache->get($this->identity(), $key, $stale);
 
         if (isset($cached['l']) && \is_array($cached['l'])) {
             return $cached['l'];

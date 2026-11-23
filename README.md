@@ -112,7 +112,7 @@ page says so when the user's own Joomla time zone differs. Times are never shift
 
 | Requirement | Version |
 |---|---|
-| Joomla | 6.2 or later |
+| Joomla | 6.0 or later (the installer checks it; developed and tested on 6.2) |
 | PHP | 8.3 or later, with OpenSSL (AES-256-GCM) and pdo_pgsql |
 | Database | MySQL / MariaDB or PostgreSQL |
 | ZKBioTime | 9.5 on PostgreSQL, its database reachable from the Joomla web server (docs/DATABASE.md) |
@@ -291,8 +291,10 @@ Database reads per page load, for one month (cold cache; a warm cache reads **no
 
 ## Security
 
-The whole component was audited at 1.0.17 (structure and security); the findings and what was
-changed are in [docs/AUDIT.md](docs/AUDIT.md).
+The whole repository was audited again at 1.3.6 (architecture, Joomla conventions, security,
+data layer, build and CI; fixes in 1.3.7), after a first audit at 1.0.17. The findings by
+severity, what was changed, the tests run and the remaining risks are in
+[docs/AUDIT.md](docs/AUDIT.md).
 
 To report a security problem, see [SECURITY.md](SECURITY.md) (privately, through the repository's
 **Security** tab; never in a public issue). The release workflow's actions are pinned to exact

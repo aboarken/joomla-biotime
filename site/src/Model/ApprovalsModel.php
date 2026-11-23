@@ -26,7 +26,8 @@ final class ApprovalsModel extends PortalModel
      */
     public function waiting(): array
     {
-        return $this->cachedList('leaves:waiting', fn (): array => $this->biotime()->getLeaveReader()->waitingFor((int) $this->identity()->employeeId()));
+        // Other employees' requests, by the approver's current ZKBioTime role: never an older copy (1.3.7).
+        return $this->cachedList('leaves:waiting', fn (): array => $this->biotime()->getLeaveReader()->waitingFor((int) $this->identity()->employeeId()), false);
     }
 
     /**

@@ -43,6 +43,11 @@ final class StoredUserCache implements UserCacheInterface
         return null;
     }
 
+    public function getMany(array $items, bool $stale = true): array
+    {
+        return array_map(fn (array $item): ?array => $this->get($item[0], $item[1], $stale), $items);
+    }
+
     public function get(Identity $identity, string $key, bool $stale = true): ?array
     {
         if ($this->ttl <= 0 || !$identity->isMatched()) {

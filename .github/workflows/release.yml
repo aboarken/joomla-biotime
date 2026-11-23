@@ -39,7 +39,7 @@ jobs:
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php }}
-          extensions: openssl, pdo_pgsql
+          extensions: openssl, pdo_pgsql, pdo_sqlite
           coverage: none
           ini-values: error_reporting=E_ALL, display_errors=On
 
@@ -53,10 +53,27 @@ jobs:
       - name: Install test tools
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      - name: Tests (a deprecation fails them)
-        run: vendor/bin/phpunit --display-deprecations --fail-on-deprecation
+      # The queries against a real PostgreSQL with ZKBioTime's tables and the portal's read-only
+      # user (1.3.7): the runner's own PostgreSQL, which has SSL on. Test passwords only.
+      - name: Start PostgreSQL and create the test database
+        env:
+          PGHOST: 127.0.0.1
+          PGUSER: postgres
+          PGPASSWORD: pg-admin-test
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -qc "ALTER USER postgres PASSWORD 'pg-admin-test'"
+          tests/Support/sql/setup-test-db.sh
+
+      - name: Tests (a deprecation fails them; none may be skipped for lack of PostgreSQL)
+        env:
+          BIOTIME_TEST_PG: '127.0.0.1:5432:biotime:joomla_portal:portal-pass-123'
+          BIOTIME_TEST_PG_ADMIN: '127.0.0.1:5432:biotime:postgres:pg-admin-test'
+        run: vendor/bin/phpunit --display-deprecations --fail-on-deprecation --fail-on-skipped
 
   package:
+    # Only once the tests passed on every supported PHP version (1.3.7).
+    needs: php
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -105,6 +122,12 @@ jobs:
       - name: Run automated tests (fake database; no ZKBioTime server needed)
         run: vendor/bin/phpunit
 
+      # Known vulnerabilities (1.3.7): the test tools, and the bundled PDF library shipped in the package.
+      - name: Dependency audit
+        run: |
+          composer audit --locked --no-interaction
+          (cd build/pdf && composer audit --locked --no-interaction)
+
       - name: Build package
         run: |
           build/build-package.sh
@@ -141,7 +164,8 @@ jobs:
         run: gh release upload "$TAG" dist/com_biotime.zip dist/updates.xml dist/changelog.xml --clobber --repo "$GITHUB_REPOSITORY"
 
       - name: Create release with package
-        if: github.event_name == 'workflow_dispatch'
+        # Releases are made from main only (1.3.7).
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}

@@ -73,31 +73,71 @@ final class DbUserCache implements UserCacheInterface
 
     public function get(Identity $identity, string $key, bool $stale = true): ?array
     {
-        if ($this->ttl <= 0 || !$identity->isMatched()) {
-            return null;
+        return $this->getMany([[$identity, $key]], $stale)[0];
+    }
+
+    /**
+     * Several entries in one query (1.3.7: the Manager Dashboard looked up every employee, month and
+     * type one by one, hundreds of queries per page).
+     *
+     * @param  list<array{0: Identity, 1: string}> $items
+     * @return list<array<mixed>|null> in the order of $items
+     */
+    public function getMany(array $items, bool $stale = true): array
+    {
+        $out = array_fill(0, \count($items), null);
+        $ids = [];
+
+        foreach ($items as $i => [$identity, $key]) {
+            if ($this->ttl > 0 && $identity->isMatched()) {
+                $ids[$this->key($identity, $key)][] = $i;
+            }
         }
 
-        $id     = $this->key($identity, $key);
+        if ($ids === []) {
+            return $out;
+        }
+
         $now    = ($this->clock)();
         $oldest = $this->allowStale && $stale ? $now - self::STALE_SECONDS : $now;
 
-        try {
-            $query = $this->db->createQuery()
-                ->select($this->db->quoteName(['value', 'expires']))
-                ->from($this->db->quoteName(self::TABLE))
-                ->where($this->db->quoteName('cache_key') . ' = :key')
-                ->where($this->db->quoteName('expires') . ' > :oldest')
-                ->bind(':key', $id)
-                ->bind(':oldest', $oldest, ParameterType::INTEGER);
+        foreach (array_chunk(array_keys($ids), 500) as $chunk) {
+            try {
+                $query = $this->db->createQuery()
+                    ->select($this->db->quoteName(['cache_key', 'value', 'expires']))
+                    ->from($this->db->quoteName(self::TABLE))
+                    ->whereIn($this->db->quoteName('cache_key'), $chunk, ParameterType::STRING)
+                    ->where($this->db->quoteName('expires') . ' > :oldest')
+                    ->bind(':oldest', $oldest, ParameterType::INTEGER);
 
-            $row = $this->db->setQuery($query)->loadAssoc();
-        } catch (\Throwable $e) {
-            $this->logger->warning('ZKBioTime cache could not be read: ' . $e::class);
+                $rows = $this->db->setQuery($query)->loadAssocList();
+            } catch (\Throwable $e) {
+                $this->logger->warning('ZKBioTime cache could not be read: ' . $e::class);
 
-            return null;
+                continue;
+            }
+
+            foreach ($rows as $row) {
+                $value = $this->value($row, $now, $stale);
+
+                foreach ($ids[(string) ($row['cache_key'] ?? '')] ?? [] as $i) {
+                    $out[$i] = $value;
+                }
+            }
         }
 
-        if (!\is_array($row) || !\is_string($row['value'] ?? null) || $row['value'] === '') {
+        return $out;
+    }
+
+    /**
+     * The value of a stored row, or null when it may not be returned.
+     *
+     * @param array<string, mixed> $row cache_key, value, expires
+     * @return array<mixed>|null
+     */
+    private function value(array $row, int $now, bool $stale): ?array
+    {
+        if (!\is_string($row['value'] ?? null) || $row['value'] === '') {
             return null;
         }
 

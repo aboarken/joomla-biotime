@@ -485,20 +485,19 @@ final class AttendanceServiceTest extends TestCase
         self::assertSame(3, $this->reads(), 'the cached copy is not used either');
     }
 
-    public function testIsCachedLooksUpOnceAndKeepsEachEmployeesEntriesApart(): void
+    public function testUncachedLooksUpTheTeamOnceAndKeepsEachEmployeesEntriesApart(): void
     {
         $service = $this->service();
         $from    = new \DateTimeImmutable('2026-11-01');
         $to      = new \DateTimeImmutable('2026-11-20');
         $bob     = Identity::matched(5, '13', 'E2');
 
-        self::assertFalse($service->isCached($this->alice, $from, $to));
+        self::assertSame([0], $service->uncached([$this->alice], $from, $to));
         $service->range($this->alice, $from, $to);
         self::assertSame(1, $this->reads());
 
         // Alice is now cached, Bob (same Joomla user: a manager reading both) is not.
-        self::assertTrue($service->isCached($this->alice, $from, $to));
-        self::assertFalse($service->isCached($bob, $from, $to));
+        self::assertSame([1], $service->uncached([$this->alice, $bob], $from, $to), 'only Bob (position 1)');
 
         $alice = $service->range($this->alice, $from, $to);
         self::assertSame(1, $this->reads(), 'Alice from the cache');
@@ -506,5 +505,15 @@ final class AttendanceServiceTest extends TestCase
         self::assertSame(2, $this->reads(), 'Bob read from the database, never with Alice\'s rows');
         self::assertSame(['03:33:33'], array_map(static fn (Punch $p): string => $p->time, $b->day('2026-11-05')->punches));
         self::assertNotSame($alice->day('2026-11-05')->punches, $b->day('2026-11-05')->punches);
+    }
+
+    /** 1.3.7 (audit): the att_payloadbase build marks leave with a flag only; such a day is leave, not absent. */
+    public function testALeaveFlagWithoutAPayCodeNameIsLeaveNotAbsent(): void
+    {
+        $this->base[] = $this->day('2026-11-10', 'Morning', '08:00:00', '17:00:00', 0, 0, 0, ['leave' => 480]);
+
+        $day = $this->service()->month($this->alice, 2026, 11)->day('2026-11-10');
+
+        self::assertSame(['other', 'Leave'], [$day->status, $day->statusRaw]);
     }
 }

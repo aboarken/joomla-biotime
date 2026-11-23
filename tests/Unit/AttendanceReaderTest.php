@@ -164,6 +164,8 @@ final class AttendanceReaderTest extends TestCase
             ['d' => '2026-11-05', 'name' => 'Annual Leave', 'symbol' => null, 'minutes' => '480.0'],
             ['d' => '2026-11-06', 'name' => 'WEEKEND', 'symbol' => 'W', 'minutes' => '1440.0'],
             ['d' => '2026-11-08', 'name' => 'HOLIDAY', 'symbol' => 'H', 'minutes' => '0.0'],
+            // 1.3.7: a leave type named in another language is leave, not absent.
+            ['d' => '2026-11-11', 'name' => 'إجازة سنوية', 'symbol' => 'AL', 'minutes' => '480.0'],
         ];
         $answers['FROM att_payloadattcode'] = [['d' => '2026-11-02', 'minutes' => '443.0']];
 
@@ -193,6 +195,8 @@ final class AttendanceReaderTest extends TestCase
         self::assertSame([12, 25, '07:42:10', 'IN07:30-OUT15:30'], [$period->day('2026-11-02')->late, $period->day('2026-11-02')->early, $period->day('2026-11-02')->checkIn, $period->day('2026-11-02')->schedule]);
         self::assertSame(['other', 'Annual Leave'], [$period->day('2026-11-05')->status, $period->day('2026-11-05')->statusRaw], 'leave, not absent');
         self::assertSame('absent', $period->day('2026-11-04')->status);
+        self::assertSame(['other', 'إجازة سنوية'], [$period->day('2026-11-11')->status, $period->day('2026-11-11')->statusRaw], 'leave in any language');
+        self::assertSame('regular', $days['2026-11-02']['leave_name'] ?? 'regular', 'Regular is not leave');
         self::assertSame([12, 25], [$period->summary()->lateMinutes, $period->summary()->earlyMinutes]);
     }
 

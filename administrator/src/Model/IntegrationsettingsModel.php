@@ -67,16 +67,31 @@ final class IntegrationsettingsModel extends FormModel
      *
      * @throws ValidationFailed  carrying language keys
      */
-    public function save(array $data): void
+    /**
+     * @return list<string> the names of the settings that changed (1.3.7, for the audit log: names
+     *                      only, never a value; the password is "db_password")
+     */
+    public function save(array $data): array
     {
         $component = $this->component();
         $validator = new SettingsValidator(
             static fn (string $plain, string $context): string => $component->getKeyVault()->encrypt($plain, $context)
         );
 
-        $values = $validator->validate($data, $this->settings());
+        $before = $this->settings();
+        $values = $validator->validate($data, $before);
 
         $this->component()->getSettingsRepository()->save($values);
+
+        $changed = [];
+
+        foreach ($values as $name => $value) {
+            if ($before->get((string) $name) !== (string) $value) {
+                $changed[] = $name === 'db_password_enc' ? 'db_password' : (string) $name;
+            }
+        }
+
+        return $changed;
     }
 
     /**

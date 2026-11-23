@@ -137,4 +137,24 @@ final class DbUserCacheTest extends TestCase
         self::assertTrue($this->log->has('warning', 'could not be written'));
         self::assertTrue($this->log->has('warning', 'could not be read'));
     }
+
+    /** 1.3.7: several entries in one query, in order, each user's own; past their time only while a page updates. */
+    public function testManyEntriesAreReadAtOnce(): void
+    {
+        $alice = Identity::matched(5, '11', 'E1');
+        $bob   = Identity::matched(5, '12', 'E2');
+        $cache = $this->cache();
+
+        $cache->set($alice, 'k1', ['a' => 1]);
+        $cache->set($bob, 'k1', ['b' => 1], 60);
+        $this->time += 120;
+
+        $items = [[$alice, 'k1'], [$bob, 'k1'], [$alice, 'missing'], [Identity::notMatched(7, 'not_found'), 'k1']];
+        self::assertSame([['a' => 1], null, null, null], $cache->getMany($items), 'Bob\'s entry is past its time');
+
+        $cache->allowStale(true);
+        self::assertSame([['a' => 1], ['b' => 1], null, null], $cache->getMany($items));
+        self::assertSame([['a' => 1], null, null, null], $cache->getMany($items, false));
+        self::assertSame([], $cache->getMany([]));
+    }
 }

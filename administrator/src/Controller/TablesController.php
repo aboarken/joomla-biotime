@@ -161,7 +161,8 @@ final class TablesController extends BaseController
         }
 
         $this->app->setUserState(self::STATE_DIAG, ['report' => $report, 'at' => time()]);
-        $this->audit(AuditLogInterface::RESULT_OK, 'diagnostics');
+        // A run that could not connect or read is recorded as an error (1.3.7).
+        $this->audit(str_contains($report, 'FAILED') ? AuditLogInterface::RESULT_ERROR : AuditLogInterface::RESULT_OK, 'diagnostics');
         $this->app->enqueueMessage(Text::_('COM_BIOTIME_DIAG_DONE'), 'success');
         $this->setRedirect(Route::_(self::URL . '#bt-diag', false));
     }
@@ -184,6 +185,7 @@ final class TablesController extends BaseController
         }
 
         $name = 'biotime-diagnostics-' . gmdate('Ymd-Hi', (int) ($diag['at'] ?? time())) . '.txt';
+        $this->audit(AuditLogInterface::RESULT_OK, 'diagnostics download');
 
         $this->app->setHeader('Content-Type', 'text/plain; charset=utf-8', true);
         $this->app->setHeader('Content-Disposition', 'attachment; filename="' . $name . '"', true);
