@@ -173,7 +173,7 @@ td.bt-mgr-late { background-color: #fffbeb; }
 
 <?php if ($this->problem !== '' || $this->tooMany > 0) : ?>
     <div class="alert"><?php echo $e($this->tooMany > 0
-        ? Text::sprintf('COM_BIOTIME_MANAGER_TOO_MANY', $this->tooMany, $this::MAX_EMPLOYEES)
+        ? Text::sprintf('COM_BIOTIME_MANAGER_TOO_MANY', $this->tooMany, $this->maxEmployees)
         : Text::_($this->problem === 'nodepartment' ? 'COM_BIOTIME_MANAGER_NO_DEPARTMENT' : 'COM_BIOTIME_ERROR_' . strtoupper($this->problem))); ?></div>
 <?php else : ?>
     <table class="meta">

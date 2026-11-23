@@ -23,11 +23,13 @@ use Joomla\CMS\Factory;
  * permissions (every department for a ZKBioTime superuser), and those ZKBioTime names them
  * Department Manager of with the departments below them; nobody else. The department
  * and employee filters only narrow that list: a value outside it is ignored. The period is at most
- * MAX_DAYS days (today by default), because every employee in the list is read.
+ * MAX_DAYS days (today by default; a year since 1.3.6). A long period reads fewer employees at a
+ * time (HtmlView::maxEmployees()), so a page never reads more than 300 employees × 31 days did.
  */
 final class ManagerModel extends PortalModel
 {
-    public const MAX_DAYS = 31;
+    /** 1.3.6: a whole year (was 31 days), as My Attendance (DateRange::MAX_DAYS after From). */
+    public const MAX_DAYS = DateRange::MAX_DAYS + 1;
 
     /** Cache key prefix of the manager's departments and team (1.0.10). */
     private const CACHE = 'mgr1:';

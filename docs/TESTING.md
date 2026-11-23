@@ -52,6 +52,11 @@ those releases.
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
 
+### 1.3.6 – Manager Dashboard: up to a year
+- [ ] Manager Dashboard, From 01/08/2026 To today (more than 31 days): the table shows every date (scroll sideways), the cards count the whole period.
+- [ ] All Departments with many employees and a whole year: the message asks to choose a department or an employee and says how many can be shown (25 for a year).
+- [ ] Export PDF (A3) for a few employees and three months: several tables "Part 1 of 3" … one row per employee.
+
 ### 1.3.5 – Diagnostics at the end
 - [ ] Find Tables: the page shows *1. Tables*, *2. Check a table*, then *Diagnostics* last; after **Run Diagnostics** the page opens at the report.
 

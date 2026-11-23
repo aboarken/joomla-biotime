@@ -3,6 +3,12 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.6] - 2026-11-23
+
+### Changed
+- **Manager Dashboard: From – To up to a year** (was 31 days), as on My Attendance. Every employee in the list is read for every day of the period, so the number shown at a time depends on the period: up to 31 days 300 employees, as before; a longer period fewer, so that employees × days stays within 300 × 31, the largest load measured (90 days: 103; a whole year: 25). With more employees, the page asks to choose a department or an employee, search an Employee ID or choose a shorter period.
+- Export PDF of a long period: A3 puts up to 31 days in a table and a longer period in several (a year: 12 pages); A4 up to 12 days per table. A year for 25 employees takes about 6 seconds.
+
 ## [1.3.5] - 2026-11-22
 
 ### Changed
