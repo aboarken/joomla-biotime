@@ -23,3 +23,9 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    # PHPUnit's major versions drop PHP versions the component still supports (PHPUnit 13 needs
+    # PHP 8.4; the component supports 8.3), so they are upgraded by hand when the oldest supported
+    # PHP allows it. Minor and patch updates, security fixes included, still arrive here.
+    ignore:
+      - dependency-name: phpunit/phpunit
+        update-types: ["version-update:semver-major"]
