@@ -95,6 +95,11 @@ final class ManagerModel extends PortalModel
     {
         $own = $this->biotime()->getAttendanceReader()->employee($this->identity()->empCode());
 
+        // The code must still belong to the mapped employee (1.3.8), as for the user's own pages.
+        if ($own !== null && (string) $own['id'] !== $this->identity()->employeeId()) {
+            $own = null;
+        }
+
         if ($own === null) {
             $this->logger()->warning(\sprintf('Manager Dashboard, Joomla user %d: no department shown: the mapped employee code is not exactly one ZKBioTime employee', $this->identity()->joomlaUserId));
 

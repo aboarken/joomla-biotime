@@ -12,6 +12,7 @@ namespace BiotimePortal\Component\Biotime\Administrator\Model;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\FormModel;
+use Joomla\Database\DatabaseInterface;
 use BiotimePortal\Component\Biotime\Administrator\Controller\SettingsController;
 use BiotimePortal\Component\Biotime\Administrator\Database\DbConfig;
 use BiotimePortal\Component\Biotime\Administrator\Database\DbConnector;
@@ -88,6 +89,18 @@ final class IntegrationsettingsModel extends FormModel
         foreach ($values as $name => $value) {
             if ($before->get((string) $name) !== (string) $value) {
                 $changed[] = $name === 'db_password_enc' ? 'db_password' : (string) $name;
+            }
+        }
+
+        // Cached months were read from the old server, or shaped by the old time zone or unit
+        // (1.3.8): they are dropped, so nobody is shown them for up to a day (and a week more while
+        // a page updates).
+        if (array_intersect($changed, ['db_engine', 'db_host', 'db_port', 'db_name', 'db_connect_via', 'server_timezone', 'db_duration_unit']) !== []) {
+            try {
+                $db = Factory::getContainer()->get(DatabaseInterface::class);
+                $db->setQuery($db->createQuery()->delete($db->quoteName('#__biotime_cache')))->execute();
+            } catch (\Throwable $e) {
+                $this->component()->getLogger()->warning('The ZKBioTime cache could not be emptied after a settings change: ' . $e::class);
             }
         }
 

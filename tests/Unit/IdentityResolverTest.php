@@ -403,6 +403,31 @@ final class IdentityResolverTest extends TestCase
         self::assertSame(['mapping.assign', 'mapping.assign', 'mapping.suspend', 'mapping.assign', 'mapping.rematch'], array_values(array_filter($this->audit->actions(), static fn ($a) => str_starts_with($a, 'mapping.'))));
     }
 
+    /**
+     * 1.3.8 (audit): a match that still waits for confirmation (anyone can create one by putting a
+     * colleague's e-mail on their own account) does not keep the administrator from mapping the
+     * employee to the right user. An active mapping still does.
+     */
+    public function testAWaitingMatchDoesNotBlockTheAdministratorsMapping(): void
+    {
+        $this->resolver()->resolve(5, 'alice@example.com');
+        self::assertSame(UserMapping::STATUS_PENDING, $this->repo->find(5)?->status);
+
+        $manager = new MappingManager($this->repo, fn () => $this->directory(), $this->audit, fn () => $this->now);
+        $manager->assign(6, 'real-alice@example.com', 'E1', 99);
+
+        self::assertTrue($this->repo->find(6)?->isActive());
+        self::assertNull($this->repo->find(5), 'the waiting row is removed; that user is matched again on the next visit');
+        self::assertContains('mapping.release', $this->audit->actions());
+
+        try {
+            $manager->assign(7, 'c@x.com', 'E1', 99);
+            self::fail('an active mapping keeps its employee');
+        } catch (MappingException $e) {
+            self::assertSame('COM_BIOTIME_MAPPING_ERR_TAKEN', $e->getMessage());
+        }
+    }
+
     public function testAdministratorMappingIsNotSuspendedByEmailOrField(): void
     {
         (new MappingManager($this->repo, fn () => $this->directory(), $this->audit, fn () => $this->now))->assign(5, 'a@x.com', 'E4', 1);

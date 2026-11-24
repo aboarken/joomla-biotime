@@ -180,6 +180,20 @@ final class SettingsValidatorTest extends TestCase
         self::assertSame('', $this->validator()->validate(['clear_db_password' => '1', 'db_engine' => ''] + $same, $current)['db_password_enc'], 'removed');
     }
 
+    /** 1.3.8 (audit): "Off" could not be saved while a password was stored (its fields are hidden then). */
+    public function testTheConnectionCanBeSwitchedOffWithAStoredPassword(): void
+    {
+        $current = new Settings($this->validator()->validate($this->database(), new Settings()));
+        $off     = $this->database(['db_engine' => '', 'db_password' => '']);
+
+        self::assertSame([], $this->errors($off, $current));
+        self::assertArrayNotHasKey('db_password_enc', $this->validator()->validate($off, $current), 'the stored password stays');
+
+        // Switching on again, for any server, asks for the password.
+        $offNow = new Settings($this->validator()->validate($off, $current) + ['db_password_enc' => $current->get('db_password_enc')]);
+        self::assertContains('COM_BIOTIME_SETTINGS_ERR_REENTER_DB_PASSWORD', $this->errors($this->database(['db_password' => '', 'db_server' => 'attacker.example.com:7496']), $offNow));
+    }
+
     public function testValidSettingsAreStoredWithTheEncryptedDatabasePassword(): void
     {
         $values = $this->validator()->validate($this->database(), new Settings());

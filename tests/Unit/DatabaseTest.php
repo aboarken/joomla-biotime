@@ -143,6 +143,19 @@ final class DatabaseTest extends TestCase
         }
     }
 
+    /** 1.3.8 (audit): SQL Server's [quoted] names are names, not keywords. */
+    public function testWordsInsideSqlServerBracketsAreNotRefused(): void
+    {
+        $sqlite = new \PDO('sqlite::memory:');
+        $sqlite->exec('CREATE TABLE t ([update] TEXT, [set] TEXT)');
+        $sqlite->exec("INSERT INTO t VALUES ('a', 'b')");
+
+        self::assertSame([['update' => 'a', 'set' => 'b']], (new Query($sqlite, 'sqlsrv'))->rows('SELECT [update], [set] FROM t'));
+
+        $this->expectException(\LogicException::class);
+        (new Query($sqlite, 'sqlsrv'))->rows('SELECT 1; UPDATE t SET [set] = 1');
+    }
+
     /** The guard ignores the words inside string literals: a value may contain them. */
     public function testWordsInsideLiteralsAreNotRefused(): void
     {

@@ -35,7 +35,8 @@ class Query
     /** The statement without its string literals and quoted names, for the keyword check above. */
     private static function withoutLiterals(string $sql): string
     {
-        return preg_replace('/\'(?:[^\']|\'\')*\'|"(?:[^"]|"")*"/', '\'\'', $sql) ?? $sql;
+        // [name] is SQL Server's quoting (1.3.8): a column named [set] or [update] is not a keyword.
+        return preg_replace('/\'(?:[^\']|\'\')*\'|"(?:[^"]|"")*"|\[(?:[^\]]|\]\])*\]/', '\'\'', $sql) ?? $sql;
     }
 
     /** SQLSTATE classes of a connection that is gone (08 connection exception, 57P0x shutdown). */
