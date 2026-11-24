@@ -286,13 +286,14 @@ Database reads per page load, for one month (cold cache; a warm cache reads **no
 | Page | Reads |
 |---|---|
 | Any page, first visit of a user | Employee code field: 1 query by code. E-mail: 1 query of the employees with an e-mail address. Then none while the mapping is active (1 per day to re-verify). |
-| Dashboard, My Attendance, Calendar, day details | the punches and the day rows of each month shown. Past months: none for a day after the first read. |
+| Dashboard, My Attendance, Calendar, day details | the punches and the day rows of each month shown. Months that ended more than 7 days ago: none for a day after the first read. |
 | My Punches | each month of the year up to today on the first load of the day; then only the current month. |
 
 ## Security
 
-The whole repository was audited again at 1.3.6 (architecture, Joomla conventions, security,
-data layer, build and CI; fixes in 1.3.7), after a first audit at 1.0.17. The findings by
+The whole repository was audited at 1.3.6 (architecture, Joomla conventions, security, data
+layer, build and CI; fixes in 1.3.7) and again at 1.3.7 (fixes in 1.3.8), after a first audit at
+1.0.17. The findings by
 severity, what was changed, the tests run and the remaining risks are in
 [docs/AUDIT.md](docs/AUDIT.md).
 

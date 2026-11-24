@@ -79,7 +79,15 @@ final class AttendanceReader
         private readonly string $timezone,
         private readonly string $unit = 'auto'
     ) {
-        if (!\in_array($timezone, \DateTimeZone::listIdentifiers(), true) && $timezone !== 'UTC') {
+        // A named zone PHP knows, aliases included (1.3.8: the list of identifiers has no aliases
+        // such as Asia/Calcutta, which the service provider passes on since 1.3.7).
+        try {
+            $known = preg_match('/^[A-Za-z][A-Za-z0-9_+\-\/]{0,63}$/', $timezone) === 1 && new \DateTimeZone($timezone) instanceof \DateTimeZone;
+        } catch (\Throwable) {
+            $known = false;
+        }
+
+        if (!$known) {
             throw new \InvalidArgumentException('timezone');
         }
     }

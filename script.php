@@ -129,6 +129,17 @@ return new class () implements ServiceProviderInterface {
                         // Not critical: Joomla's tmp folder can be emptied by hand.
                     }
 
+                    // The component's own log (1.3.8): it holds user ids and database error text.
+                    try {
+                        $log = rtrim((string) Factory::getApplication()->get('log_path', JPATH_ADMINISTRATOR . '/logs'), '/\\') . '/com_biotime.php';
+
+                        if (is_file($log)) {
+                            File::delete($log);
+                        }
+                    } catch (\Throwable) {
+                        // Not critical.
+                    }
+
                     return true;
                 }
 

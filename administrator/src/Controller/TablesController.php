@@ -148,9 +148,12 @@ final class TablesController extends BaseController
             'Detailed logging'     => $settings->detailedLog() ? 'on' : 'off',
         ];
 
+        $failed = false;
+
         try {
             $report = TableDiagnostics::run($this->connect(), $portal);
         } catch (DbException $e) {
+            $failed = true;
             $lines = ['ZKBioTime portal diagnostics', 'FAILED before the first query: ' . $e->getKind() . ($e->getDetail() !== '' ? ' (' . $e->getDetail() . ')' : ''), ''];
 
             foreach ($portal as $label => $value) {
@@ -160,10 +163,13 @@ final class TablesController extends BaseController
             $report = implode("\n", $lines) . "\n";
         }
 
+        // The report's own failure lines, at the start of a line: not the word in a table or value name.
+        $failed = $failed || preg_match('/^(?:FAILED|Table list FAILED): /m', $report) === 1;
+
         $this->app->setUserState(self::STATE_DIAG, ['report' => $report, 'at' => time()]);
-        // A run that could not connect or read is recorded as an error (1.3.7).
-        $this->audit(str_contains($report, 'FAILED') ? AuditLogInterface::RESULT_ERROR : AuditLogInterface::RESULT_OK, 'diagnostics');
-        $this->app->enqueueMessage(Text::_('COM_BIOTIME_DIAG_DONE'), 'success');
+        // A run that could not connect is recorded as an error (1.3.7) and says so (1.3.8).
+        $this->audit($failed ? AuditLogInterface::RESULT_ERROR : AuditLogInterface::RESULT_OK, 'diagnostics');
+        $this->app->enqueueMessage(Text::_($failed ? 'COM_BIOTIME_DIAG_FAILED' : 'COM_BIOTIME_DIAG_DONE'), $failed ? 'warning' : 'success');
         $this->setRedirect(Route::_(self::URL . '#bt-diag', false));
     }
 
@@ -185,7 +191,9 @@ final class TablesController extends BaseController
         }
 
         $name = 'biotime-diagnostics-' . gmdate('Ymd-Hi', (int) ($diag['at'] ?? time())) . '.txt';
-        $this->audit(AuditLogInterface::RESULT_OK, 'diagnostics download');
+        // Its own action (1.3.8): a download reads nothing from ZKBioTime, so it does not count
+        // towards the hourly limit of table checks.
+        $this->component()->getAuditLog()->record($this->actorId(), 'tables.download', AuditLogInterface::RESULT_OK, 'diagnostics', $this->actorId());
 
         $this->app->setHeader('Content-Type', 'text/plain; charset=utf-8', true);
         $this->app->setHeader('Content-Disposition', 'attachment; filename="' . $name . '"', true);

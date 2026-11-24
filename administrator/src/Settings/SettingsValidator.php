@@ -267,7 +267,10 @@ final class SettingsValidator
             || $ssl !== $current->get('db_ssl') || $ca !== $current->get('db_ca')
         );
 
-        if ($moved && $password === '' && $has && $current->hasDbPassword()) {
+        // Switching the connection off (1.3.8) keeps the stored password: nothing connects, and the
+        // fields that would let the administrator re-enter or clear it are hidden then. Switching
+        // it on again counts as a change of engine, so the password is asked for again.
+        if ($moved && $engine !== '' && $password === '' && $has && $current->hasDbPassword()) {
             $errors[]                  = 'COM_BIOTIME_SETTINGS_ERR_REENTER_DB_PASSWORD';
             $values['db_password_enc'] = '';
             $has                       = false;

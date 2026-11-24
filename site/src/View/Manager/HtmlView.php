@@ -144,11 +144,6 @@ class HtmlView extends BaseHtmlView
             $this->departments = $model->departments();
             $this->problem     = $this->departments === [] ? 'nodepartment' : '';
 
-            // A PDF report reads every employee without the cache: at most a few an hour (1.0.18).
-            if ($this->problem === '' && $this->report && !$model->allowExport()) {
-                $this->problem = 'exportlimit';
-            }
-
             if ($this->problem === '') {
                 $this->team      = $model->team();
                 $this->dept      = $model->selectedDepartment();
@@ -160,6 +155,14 @@ class HtmlView extends BaseHtmlView
 
                 if (\count($this->employees) > $this->maxEmployees) {
                     $this->tooMany   = \count($this->employees);
+                    $this->employees = [];
+                }
+
+                // A PDF report reads every employee without the cache: at most a few an hour (1.0.18).
+                // Counted only when there is something to read (1.3.8), not for a report that only
+                // says "too many employees" or has none.
+                if ($this->report && $this->employees !== [] && !$model->allowExport()) {
+                    $this->problem   = 'exportlimit';
                     $this->employees = [];
                 }
 

@@ -69,8 +69,10 @@ final class DisplayController extends BaseController
 
         // Only the Manager Dashboard's report has a page of its own (format=raw, 1.1.2): it is
         // the report without the site template, its cookie notices and pop-ups.
-        if ($this->input->getCmd('format', 'html') !== 'html'
-            && ($view !== 'manager' || !\in_array($this->input->getCmd('layout', ''), ['print', 'pdf'], true))) {
+        $format = $this->input->getCmd('format', 'html');
+
+        if ($format !== 'html'
+            && ($format !== 'raw' || $view !== 'manager' || !\in_array($this->input->getCmd('layout', ''), ['print', 'pdf'], true))) {
             throw new RouteNotFoundException(Text::_('JERROR_PAGE_NOT_FOUND'), 404);
         }
 

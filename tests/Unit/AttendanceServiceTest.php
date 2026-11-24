@@ -112,8 +112,8 @@ final class AttendanceServiceTest extends TestCase
         return new CatalogueQuery('pgsql', [
             // One code (:code) or several read ahead together (:c0, :c1, ...; 1.0.2).
             'FROM personnel_employee' => $answer('FROM personnel_employee', static fn (array $p): array => array_merge([], ...array_map(static fn (string $code): array => match ($code) {
-                'E1'    => [['id' => 1, 'emp_code' => 'E1', 'department_id' => 10, 'first_name' => 'Alice', 'last_name' => 'A', 'dept_name' => 'IT', 'position_name' => 'Developer', 'hire_date' => '2024-09-01']],
-                'E2'    => [['id' => 2, 'emp_code' => 'E2', 'department_id' => 10, 'first_name' => 'Bob', 'last_name' => 'B', 'dept_name' => 'IT', 'position_name' => 'Tester', 'hire_date' => null]],
+                'E1'    => [['id' => 11, 'emp_code' => 'E1', 'department_id' => 10, 'first_name' => 'Alice', 'last_name' => 'A', 'dept_name' => 'IT', 'position_name' => 'Developer', 'hire_date' => '2024-09-01']],
+                'E2'    => [['id' => 13, 'emp_code' => 'E2', 'department_id' => 10, 'first_name' => 'Bob', 'last_name' => 'B', 'dept_name' => 'IT', 'position_name' => 'Tester', 'hire_date' => null]],
                 default => [],
             }, isset($p[':code']) ? [$p[':code']] : array_values(array_filter($p, static fn (string $k): bool => preg_match('/^:c\d+$/', $k) === 1, ARRAY_FILTER_USE_KEY))))),
             'FROM att_attemployee'    => [],
@@ -122,9 +122,9 @@ final class AttendanceServiceTest extends TestCase
                 $this->punches,
                 static fn (array $r): bool => $r['punch_time'] >= $p[':from'] && $r['punch_time'] < $p[':to']
             ))),
-            // Alice's rows (emp_id 1), asked for alone (:emp) or read ahead with others (k).
-            'FROM att_payloadbase'    => $answer('FROM att_payloadbase', fn (array $p): array => ($p[':emp'] ?? 1) !== 1 ? [] : array_values(array_map(
-                static fn (array $r): array => $r + ['k' => 1],
+            // Alice's rows (emp_id 11), asked for alone (:emp) or read ahead with others (k).
+            'FROM att_payloadbase'    => $answer('FROM att_payloadbase', fn (array $p): array => ($p[':emp'] ?? 11) !== 11 ? [] : array_values(array_map(
+                static fn (array $r): array => $r + ['k' => 11],
                 array_filter($this->base, static fn (array $r): bool => $r['att_date'] >= $p[':from'] && $r['att_date'] <= $p[':to'])
             ))),
             'FROM att_holiday'        => $answer('FROM att_holiday', fn (): array => $this->holidays),
@@ -160,7 +160,7 @@ final class AttendanceServiceTest extends TestCase
         self::assertSame(['E1', '2026-11-01 00:00:00', '2026-12-01 00:00:00', 'Asia/Riyadh'], [$tx[':code'], $tx[':from'], $tx[':to'], $tx[':tz1']]);
 
         $daily = $this->params['FROM att_payloadbase'][0];
-        self::assertSame([1, '2026-11-01', '2026-11-30'], [$daily[':emp'], $daily[':from'], $daily[':to']]);
+        self::assertSame([11, '2026-11-01', '2026-11-30'], [$daily[':emp'], $daily[':from'], $daily[':to']]);
         self::assertSame('E1', $this->params['FROM personnel_employee'][0][':code']);
     }
 
@@ -403,6 +403,81 @@ final class AttendanceServiceTest extends TestCase
         self::assertNull($period->error('punches'));
         self::assertCount(2, $period->day('2026-11-02')->punches);
         self::assertTrue($this->log->has('warning', 'daily could not be read'));
+    }
+
+    /**
+     * 1.3.8 (audit): a month that could not be read is not a month of absences. Before, every past
+     * working day became "Absent" and the attendance rate 0%, on the cards and in the reports.
+     */
+    public function testAMonthThatCouldNotBeReadHasNoAbsentDays(): void
+    {
+        $this->failing['FROM iclock_transaction'] = static fn () => throw new DbException(DbException::QUERY, 'statement timeout');
+
+        $period = $this->service()->month($this->alice, 2026, 11);
+
+        self::assertSame('server', $period->error('punches'));
+        self::assertSame([], array_filter($period->days, static fn ($d): bool => $d->status === 'absent'));
+        self::assertSame(0, \BiotimePortal\Component\Biotime\Administrator\Attendance\Summary::of($period->days, '2026-11-20')->absentDays);
+    }
+
+    /** 1.3.8 (audit): a connection that failed is not tried again for every month and type of the page. */
+    public function testAFailedConnectionIsTriedOncePerPage(): void
+    {
+        $tries = 0;
+        $this->failing['FROM personnel_employee'] = static function () use (&$tries): never {
+            $tries++;
+
+            throw new DbException(DbException::UNREACHABLE, 'down');
+        };
+
+        $period = $this->service()->range($this->alice, new \DateTimeImmutable('2026-08-01'), new \DateTimeImmutable('2026-11-20'));
+
+        self::assertSame(['punches' => 'network', 'daily' => 'network'], $period->errors);
+        self::assertLessThanOrEqual(2, $tries, 'not once per month and type (9 before)');
+        self::assertSame([], array_filter($period->days, static fn ($d): bool => $d->status === 'absent'));
+    }
+
+    /** 1.3.8 (audit): days before the hire date are not absences (Alice was hired on 2024-09-01). */
+    public function testDaysBeforeTheHireDateAreNotAbsent(): void
+    {
+        $period = $this->service(300, '2024-09-20 12:00:00')->range($this->alice, new \DateTimeImmutable('2024-08-25'), new \DateTimeImmutable('2024-09-05'));
+
+        self::assertNull($period->day('2024-08-27')?->status, 'a working day before the hire date');
+        self::assertSame('absent', $period->day('2024-09-02')?->status, 'employed, no punch');
+
+        // The same from the cache.
+        $again = $this->service(300, '2024-09-20 12:00:00')->range($this->alice, new \DateTimeImmutable('2024-08-25'), new \DateTimeImmutable('2024-09-05'));
+        self::assertNull($again->day('2024-08-27')?->status);
+    }
+
+    /**
+     * 1.3.8 (audit): attendance is shown only while the mapped code still belongs to the mapped
+     * employee. A code given to someone else in ZKBioTime showed that person's days until the
+     * daily re-check of the mapping.
+     */
+    public function testACodeThatNowBelongsToAnotherEmployeeShowsNothing(): void
+    {
+        $period = $this->service()->month(Identity::matched(5, '999', 'E1'), 2026, 11);
+
+        self::assertSame(['punches' => 'not_found', 'daily' => 'not_found'], $period->errors);
+        self::assertSame([], $period->day('2026-11-02')->punches);
+    }
+
+    /** 1.3.8 (audit): a month that has just ended is not kept for a day yet (late uploads, leave approved afterwards). */
+    public function testAMonthThatJustEndedIsKeptForTheCacheTimeOnly(): void
+    {
+        $time  = strtotime('2026-12-01 08:00:00 UTC');
+        $range = function () use (&$time): void {
+            $this->service(300, '2026-12-01 08:00:00', [5, 6], static function () use (&$time): int {
+                return $time;
+            })->month($this->alice, 2026, 11);
+        };
+
+        $range();
+        $time += 600;
+        $range();
+
+        self::assertSame(2, $this->reads(), 'November is read again ten minutes later');
     }
 
     public function testDatabaseErrorsBecomePortalMessages(): void

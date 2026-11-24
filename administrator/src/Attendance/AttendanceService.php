@@ -48,12 +48,22 @@ final class AttendanceService
     public const PAST_MONTH_TTL = 86400;
 
     /**
+     * A month is kept that long only once it ended this many days ago (1.3.8): ZKBioTime calculates
+     * the last days, devices upload late and leave is approved afterwards, so a month that has just
+     * ended is still kept for the cache time only.
+     */
+    public const SETTLED_AFTER_DAYS = 7;
+
+    /** Database errors after which another connection attempt in the same request is pointless. */
+    private const DOWN = [DbException::NOT_CONFIGURED, DbException::DRIVER_MISSING, DbException::UNREACHABLE, DbException::AUTH, DbException::SSL, DbException::DATABASE];
+
+    /**
      * Part of every database cache key. Raised whenever the rows read from the database change
      * shape (0.6.3: late-in and early-out from ZKBioTime 9.5's pay codes), so an update never shows
      * months cached by an older version (past months are kept a day). 5 (1.3.7): every leave pay
      * code is recognised, whatever its name.
      */
-    public const CACHE_VERSION = 5;
+    public const CACHE_VERSION = 6;
 
     /** The first year the portal offers (year lists, month navigation). */
     public const FIRST_YEAR = 2025;
@@ -75,6 +85,12 @@ final class AttendanceService
 
     /** False while range() reads without the cache. */
     private bool $cacheOn = true;
+
+    /**
+     * The error kind of a connection that failed in this request (1.3.8). Without it every month
+     * and type tried to connect again: a school year waited for the connect timeout about 25 times.
+     */
+    private ?string $down = null;
 
     /**
      * @param \Closure(): AttendanceReader           $database    ZKBioTime's database, opened when first needed
@@ -273,25 +289,32 @@ final class AttendanceService
             }
         }
 
-        if (\count($missing) >= 2 && $identity->isMatched()) {
+        if (\count($missing) >= 2 && $identity->isMatched() && $this->down === null) {
             try {
                 ($this->database)()->preload([$identity->empCode()], reset($missing), end($missing)->modify('last day of this month'));
-            } catch (DbException) {
+            } catch (DbException $e) {
                 // Each month is then read on its own and its error shown as usual.
+                $this->noteDown($e);
             }
         }
+
+        // Months that could not be read completely, and the hire date (1.3.8): see build().
+        $unread = [];
+        $hired  = null;
 
         for ($m = $from->modify('first day of this month'); $m <= $to; $m = $m->modify('first day of next month')) {
             foreach ([self::TYPE_PUNCHES, self::TYPE_DAILY] as $type) {
                 $part = $this->monthRows($identity, $type, (int) $m->format('Y'), (int) $m->format('n'));
 
                 if ($part['error'] !== null) {
-                    $errors[$type] = $part['error'];
+                    $errors[$type]            = $part['error'];
+                    $unread[$m->format('Y-m')] = true;
 
                     continue;
                 }
 
                 $data[$type] = array_merge($data[$type], $part['rows']);
+                $hired     ??= $part['hired'] ?? null;
 
                 if ($part['at'] !== null) {
                     $fetched = $fetched === null ? $part['at'] : min($fetched, $part['at']);
@@ -299,7 +322,14 @@ final class AttendanceService
             }
         }
 
-        return $this->build($from, $to, $data, $errors, $fetched);
+        return $this->build($from, $to, $data, $errors, $fetched, $unread, $hired);
+    }
+
+    private function noteDown(DbException $e): void
+    {
+        if (\in_array($e->getKind(), self::DOWN, true)) {
+            $this->down ??= SourceException::kindOf($e);
+        }
     }
 
     /**
@@ -323,8 +353,10 @@ final class AttendanceService
     /**
      * @param array<string, list<array<string, mixed>>> $data
      * @param array<string, ?string>                    $errors
+     * @param array<string, true>                       $unread months (Y-m) whose punches or days could not be read
+     * @param ?string                                   $hired  the employee's hire date (Y-m-d), when known
      */
-    private function build(\DateTimeImmutable $from, \DateTimeImmutable $to, array $data, array $errors, ?int $fetched): Period
+    private function build(\DateTimeImmutable $from, \DateTimeImmutable $to, array $data, array $errors, ?int $fetched, array $unread = [], ?string $hired = null): Period
     {
         $punches = [];
 
@@ -374,6 +406,14 @@ final class AttendanceService
                 [$status, $derived] = ['rest', false];
             } else {
                 $status = self::dayStatus($date, $today, $weekend, $checkIn, $checkOut, $p !== []);
+
+                // "Absent" is only said of a day the portal could read, and of an employee who was
+                // already employed (1.3.8). Before, a database error made every working day of the
+                // month absent (0% attendance), and a new employee was absent on every day of the
+                // school year before the hire date.
+                if ($status === 'absent' && (isset($unread[substr($date, 0, 7)]) || ($hired !== null && $date < $hired))) {
+                    $status = null;
+                }
             }
 
             $day = new Day(
@@ -447,7 +487,7 @@ final class AttendanceService
      * One month of one data type: from the cache, or read from the database (punches normalised and
      * ownership-checked).
      *
-     * @return array{rows: list<array<string, mixed>>, at: ?int, error: ?string}
+     * @return array{rows: list<array<string, mixed>>, at: ?int, error: ?string, hired?: ?string}
      */
     private static function cacheKey(string $type, int $year, int $month): string
     {
@@ -469,16 +509,30 @@ final class AttendanceService
             $stat['cached']++;
             $stat['read'] += \count($cached['rows']);
 
-            return ['rows' => $cached['rows'], 'at' => (int) $cached['at'], 'error' => null];
+            return ['rows' => $cached['rows'], 'at' => (int) $cached['at'], 'error' => null, 'hired' => \is_string($cached['hired'] ?? null) ? $cached['hired'] : null];
         }
 
         $first = self::firstOfMonth($year, $month);
         $last  = $first->modify('last day of this month');
-        $ttl   = $last->format('Y-m-d') < $this->today() ? self::PAST_MONTH_TTL : null;
+        $ttl   = $last->modify('+' . self::SETTLED_AFTER_DAYS . ' days')->format('Y-m-d') < $this->today() ? self::PAST_MONTH_TTL : null;
+
+        if ($this->down !== null) {
+            $stat['error'] = $this->down;
+
+            return ['rows' => [], 'at' => null, 'error' => $this->down];
+        }
 
         try {
             $reader   = ($this->database)();
             $employee = $reader->employee($identity->empCode());
+
+            // The code must still belong to the employee the user was mapped to (1.3.8): a code
+            // given to another person in ZKBioTime showed that person's attendance until the daily
+            // re-check of the mapping.
+            if ($employee !== null && (string) $employee['id'] !== $identity->employeeId()) {
+                $this->logger->warning(\sprintf('ZKBioTime database: the mapped code of Joomla user %d now belongs to another employee; nothing is shown', $identity->joomlaUserId));
+                $employee = null;
+            }
 
             if ($employee === null) {
                 // Not exactly one employee with this code in the database: nothing is shown.
@@ -494,16 +548,19 @@ final class AttendanceService
                 $at   = ($this->clock)()->getTimestamp();
                 $stat['read'] += \count($rows);
 
+                $hired = $employee['hire_date'] ?? null;
+
                 if ($this->cacheOn) {
-                    $this->cache->set($identity, $key, ['rows' => $rows, 'at' => $at], $ttl);
+                    $this->cache->set($identity, $key, ['rows' => $rows, 'at' => $at, 'hired' => $hired], $ttl);
                 }
 
-                return ['rows' => $rows, 'at' => $at, 'error' => null];
+                return ['rows' => $rows, 'at' => $at, 'error' => null, 'hired' => $hired];
             }
 
             $items = $reader->punches($identity->empCode(), $first, $last);
         } catch (DbException $e) {
             $kind = SourceException::kindOf($e);
+            $this->noteDown($e);
             // The kind and SQLSTATE only (1.0.10): the driver's text can name the database user,
             // the server or a value. Test Database shows the full text to the administrator.
             $this->logger->warning('ZKBioTime database: ' . $type . ' could not be read (' . $e->getKind() . ($e->sqlState() !== '' ? ', SQLSTATE ' . $e->sqlState() : '') . ')');

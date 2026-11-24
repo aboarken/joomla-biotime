@@ -1,7 +1,69 @@
 # Audit of com_biotime
 
-The latest full audit covers version 1.3.6; its fixes are in 1.3.7. The earlier audit (1.0.17) is
-kept at the end.
+Two full audits are recorded here: of version 1.3.7 (fixes in 1.3.8, directly below) and of
+version 1.3.6 (fixes in 1.3.7, sections 1 to 7). The first audit (1.0.17) is kept at the end.
+
+## Second audit: version 1.3.7, fixed in 1.3.8
+
+**What was done.** Three independent reviews read the code again, with the first audit's report in
+hand and the instruction to report only what it had missed: the employee and manager pages, the
+administrator side with installer, schema, manifest and release workflow, and the data layer. Each
+finding was checked against the code (the data-layer findings H1 to M4 were also measured against
+the PostgreSQL fixture) before anything changed.
+
+**Result.** No Critical finding. No new way for a request to reach another employee's data. Two
+High findings, both about wrong figures rather than access, and both fixed.
+
+| # | Severity | Finding | Status in 1.3.8 |
+|---|---|---|---|
+| H1 | High (correctness) | **A month that could not be read became a month of absences.** After a failed read (outage, timeout, permission) every past working day was "Absent" and the rate 0%, on cards, charts and the manager's printed and PDF reports. | **Fixed**: days of such a month have no status. Test added. |
+| H2 | High (correctness) | **Days before the hire date were Absent.** A new employee had every earlier working day of the school year counted as absent, also in the manager's reports. | **Fixed**: the hire date is read with the daily rows; earlier days have no status. Test added. |
+| M1 | Medium | **No memory of a failed connection.** Each month and type connected again: 9 attempts for 4 months, about 25 connect timeouts for a school year, far more on the Manager Dashboard. | **Fixed**: one failure per page is remembered. Test added. |
+| M2 | Medium | **The month that just ended was frozen for 24 hours** from its first view. | **Fixed**: the long time applies once the month ended 7 days ago. Test added. |
+| M3 | Medium | **Cached months were not tied to the settings that shaped them** (server, database, time zone, duration unit). | **Fixed**: the cache is emptied when one of them changes. |
+| M4 | Medium (security) | **Stale form state in User Mappings.** After a failed save for user A, opening user B showed and posted A's id: B's code would be mapped to A. | **Fixed**: the kept values are used only for the same user. |
+| M5 | Low to Medium (security) | **An unconfirmed match reserved the employee.** A user who set a colleague's e-mail on their own account got a waiting row that made the colleague "ambiguous" and the administrator's mapping fail ("already mapped"). No data was exposed. | **Fixed** for the administrator: mapping by code removes another user's waiting or suspended row (audited as `mapping.release`). Automatic matching still treats the first waiting row as owner (**open**, see below). Test added. |
+| L1 | Low (security) | **Attendance was read by employee code without checking the mapped employee id.** A code reissued in ZKBioTime showed the new holder's data until the daily re-check. | **Fixed** on the user's pages and for the manager's departments. Test added. |
+| L2 | Low | **Database "Off" could not be saved with a stored password.** | **Fixed**. Test added. |
+| L3 | Low | **A unique-key race in mapping gave an error page.** | **Fixed**: "already mapped". |
+| L4 | Low | **Diagnostics**: success message after a failed run; failure detected by the word FAILED anywhere; downloads counted against the table-check limit. | **Fixed**. |
+| L5 | Low | **User Mappings search was case-sensitive on PostgreSQL-hosted Joomla.** | **Fixed**. |
+| L6 | Low | **The report quota was spent before the report was known to be producible.** | **Fixed**. |
+| L7 | Low | **The read-only guard refused SQL Server `[bracketed]` names that are keywords** (error page in Find Tables). | **Fixed**. Test added. |
+| L8 | Low | **A time zone alias stopped the readers** (the 1.3.7 fix C7 passed aliases the reader then refused). | **Fixed**. |
+| L9 | Low (supply chain) | **The package job held a write token while running the test tools.** | **Fixed**: read-only build job; a separate upload job that runs no repository code. First real run is the 1.3.8 release. |
+| I1 | Info | Settings audit rows lacked the actor; rematch audited "ok" without a mapping; the log file stayed after uninstall; any non-html format passed the report gate; a variable name in this document. | **Fixed**. |
+
+**Open after this audit** (in addition to S2, S3, S10, S11, S12, C4, C10, C11, J4 and J8 below):
+
+- **Attendance rate and weekend work.** A worked weekend day counts as a working day in "Days
+  Present" (18 of 22 instead of 16 of 20 in the reviewer's example). Left as it is: it is a
+  definition, not an error, and changing a figure managers already read needs the owner's decision.
+- **My Approvals** applies its limit of 200 before removing repeated requests, and leaves out
+  requests whose status is NULL. Not changed without a live server to check the statuses against.
+- **Mappings of deleted Joomla users** stay in the table (labelled in the list). Since 1.3.8 they
+  no longer block the administrator unless they are active; *Re-match* removes them.
+- **Cache minutes = 0** makes every Manager Dashboard page a full team read. Keep the cache on.
+- **Resigned employees** leave the manager's team list on the resignation date, also for reports
+  of earlier months.
+- **Keyboard use:** filters submit when a select changes, and the background update replaces the
+  page content, which moves keyboard focus to the top. Not changed without browser testing.
+- **Column look-ups** for `auth_user` do not filter by schema; **error classification** reads the
+  driver's text before the SQLSTATE. Both can only hide data, not expose it.
+- **Replacing a release:** a manual run for a version that already has a release replaces its
+  files. Never re-run a release after changing code without raising the version.
+- **Audit table:** never purged (C10). No retention period was chosen for the owner.
+- **S3** (password not bound to the server) was looked at again and left open: the attack needs
+  write access to Joomla's database, and a failed migration of the stored password would stop
+  the portal.
+
+**Tests (1.3.8).** `phpunit --display-deprecations --fail-on-deprecation --fail-on-skipped` against
+the PostgreSQL 16 fixture: 145 tests, 965 assertions, all passed, none skipped (PHP 8.3.6). PHP lint
+clean. `composer audit` for both lock files: no advisories. Package built and verified.
+**Not run:** PHPStan (its download is not reachable from this environment), PHP 8.4/8.5 (CI only),
+a live Joomla or ZKBioTime, a browser, SQL Server.
+
+# First full audit: version 1.3.6, fixed in 1.3.7
 
 ## 1. Executive summary
 
@@ -46,7 +108,7 @@ This was a code review, not a penetration test of a live site.
 | Identity | Joomla user → ZKBioTime employee mapping (`#__biotime_usermap`): by an admin-only profile field, by e-mail (waiting for approval by default), or by an administrator. |
 | Pages | My Dashboard, My Attendance, Calendar, Day, My Punches, My Leaves, My Approvals, Manager Dashboard (team scope from ZKBioTime's user/department permissions), print page and server-side PDF (bundled mPDF 8.3.1). |
 | Cache | Per user and employee in `#__biotime_cache` (plain JSON, no secrets). It may be served past its time for up to 7 days while the page reloads itself in the background (`refresh.js`); team scope and approver lists never are. |
-| Administrator | Integration Settings (password encrypted with AES-256-GCM, key from `BIOTIME_SECRET` or Joomla's `secret` through HKDF), User Mappings, Find Tables (read-only schema explorer and Diagnostics). Super user only (`core.admin`). |
+| Administrator | Integration Settings (password encrypted with AES-256-GCM, key from `BIOTIME_PORTAL_SECRET` or Joomla's `secret` through HKDF), User Mappings, Find Tables (read-only schema explorer and Diagnostics). Super user only (`core.admin`). |
 | Audit and limits | `#__biotime_audit` (identity events, admin actions, PDF exports), rate limits on Test Database, Find Tables and PDF exports. |
 
 The design keeps the separation it had: readers (SQL) → `AttendanceService` (rules, cache) → models → views and templates. The audit added no new layers.

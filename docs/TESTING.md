@@ -64,6 +64,23 @@ those releases.
 - [ ] Record the ZKBioTime **build number** (ZKBioTime *System → About*) in `docs/DATABASE.md`.
 - [ ] Create the read-only database user for the portal (`docs/DATABASE.md`).
 
+### 1.3.8 – Second audit
+
+1. **New employee:** open My Dashboard as (or the Manager Dashboard for) an employee hired this
+   school year. Days before the hire date show no status and are not in Absent Days.
+2. **Outage:** stop ZKBioTime's database (or block the port) and open My Dashboard. The error
+   notice shows within about one connect timeout, and Absent Days is not the whole month.
+3. **Settings:** set Database to *Off* and save without touching the password: saved. Set it back
+   to PostgreSQL: the password is asked for again.
+4. **User Mappings:** edit user A with an unknown code (error), go back to the list without
+   Cancel, open user B: the form shows B, not A.
+5. **Waiting match:** with a user waiting for approval for employee X, map X to another user by
+   code: saved; the waiting row is gone and the audit table has `mapping.release`.
+6. **Diagnostics:** with the database unreachable, Run Diagnostics shows the "could not finish"
+   warning.
+7. **Release workflow:** the next manual release run shows three jobs (PHP, package, release) and
+   the release has its three files.
+
 ### 1.3.7 – Audit fixes
 - [ ] User Mappings: a user whose row is *Not found* (e.g. a code typed into an editable profile field) cannot be confirmed (message: nothing to confirm); a *Waiting for approval* row still confirms.
 - [ ] Manager Dashboard → Export PDF (A4/A3) still downloads. Copy the link, open it in another tab after logging out and in again: "This report link has expired…" (403).

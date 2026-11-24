@@ -3,6 +3,37 @@
 All notable changes to `com_biotime` are documented in this file.
 Versions follow the component manifest (`biotime.xml`) and use [Semantic Versioning](https://semver.org/).
 
+## [1.3.8] - 2026-11-24
+
+Second full audit (three independent reviews at 1.3.7: employee and manager pages, administrator
+side and packaging, data layer). No Critical finding. Two High findings about wrong figures, both
+fixed. Details in docs/AUDIT.md.
+
+### Fixed
+- **A month that could not be read showed every working day as Absent and 0% attendance** (cards, charts, Manager Dashboard, printed and PDF reports) next to the error notice. Days of such a month now have no status.
+- **Days before an employee's hire date counted as Absent**: a new employee had dozens of absent days on My Dashboard (which covers the school year) and in the manager's reports.
+- **When ZKBioTime's database was unreachable, each month and type tried to connect again**: a school-year page waited for the connect timeout about 25 times, the Manager Dashboard far longer. The first failure is now remembered for the page.
+- **The month that just ended was kept for a day** from its first view, so late device uploads and leave approved afterwards stayed missing; it is kept for the cache time until it ended 7 days ago.
+- **Changed connection, time zone or duration unit settings kept showing months read with the old settings** for up to a day; the cache is emptied when one of them changes.
+- **User Mappings: a failed save for one user was shown, and would have been saved, when another user was opened afterwards**, mapping the wrong Joomla user.
+- **Database "Off" could not be saved while a password was stored** (the fields to re-enter or clear it are hidden then).
+- Find Tables on SQL Server: a column named like a keyword (`[set]`, `[update]`) is no longer refused by the read-only guard.
+- A time zone alias (e.g. Asia/Calcutta) no longer stops the database readers.
+- Diagnostics says so when it could not finish, is recorded as failed only for its own failure lines, and a report download no longer counts towards the hourly limit of table checks.
+- User Mappings search ignores upper and lower case when Joomla runs on PostgreSQL.
+- Two administrators mapping the same employee at the same moment get the "already mapped" message instead of an error page.
+
+### Security
+- **Attendance, leave and team data are shown only while the mapped employee code still belongs to the mapped employee.** A code given to another person in ZKBioTime showed that person's data until the daily re-check of the mapping.
+- **A match that waits for approval (or is suspended) no longer keeps the administrator from mapping that employee to the right user.** Anyone could block a colleague's mapping by putting the colleague's e-mail address on their own account. The waiting row is removed and recorded in the audit log.
+- A PDF report counts towards the manager's hourly limit only when there is something to read (not for "too many employees").
+- Only `format=raw` reaches the report pages.
+- Release workflow: the job that builds and tests the package has a read-only token; a separate job that runs no repository code uploads the release.
+- Settings audit rows record the acting administrator; uninstalling removes the component's log file.
+
+### Internal
+- CACHE_VERSION 6 (months read again once after the update). Eight new tests (145 tests). No database changes.
+
 ## [1.3.7] - 2026-11-23
 
 Full repository audit (architecture, Joomla conventions, security, data layer, build and CI) at
