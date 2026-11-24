@@ -94,17 +94,18 @@ final class UsermappingsModel extends ListModel
         $search = trim((string) $this->getState('filter.search'));
 
         if ($search !== '') {
-            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search) . '%';
+            // Lower case on both sides (1.3.8): LIKE is case-sensitive when Joomla runs on PostgreSQL.
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower($search)) . '%';
             $or   = [
-                $db->quoteName('u.name') . ' LIKE :s1',
-                $db->quoteName('u.username') . ' LIKE :s2',
-                $db->quoteName('u.email') . ' LIKE :s3',
+                'LOWER(' . $db->quoteName('u.name') . ') LIKE :s1',
+                'LOWER(' . $db->quoteName('u.username') . ') LIKE :s2',
+                'LOWER(' . $db->quoteName('u.email') . ') LIKE :s3',
             ];
 
             $query->bind(':s1', $like)->bind(':s2', $like)->bind(':s3', $like);
 
             if ($status !== 'none') {
-                $or[] = $db->quoteName('m.emp_code') . ' LIKE :s4';
+                $or[] = 'LOWER(' . $db->quoteName('m.emp_code') . ') LIKE :s4';
                 $query->bind(':s4', $like);
             }
 

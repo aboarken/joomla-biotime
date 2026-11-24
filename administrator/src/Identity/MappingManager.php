@@ -89,13 +89,38 @@ final class MappingManager
         $owner = $this->repository->findByEmployeeId($employeeId);
 
         if ($owner !== null && $owner->joomlaUserId !== $joomlaUserId) {
-            $this->audit->record($joomlaUserId, 'mapping.assign', AuditLogInterface::RESULT_DENIED, 'employee_already_mapped:' . $owner->joomlaUserId, $actorId);
+            if ($owner->status === UserMapping::STATUS_ACTIVE) {
+                $this->audit->record($joomlaUserId, 'mapping.assign', AuditLogInterface::RESULT_DENIED, 'employee_already_mapped:' . $owner->joomlaUserId, $actorId);
 
-            throw new MappingException('COM_BIOTIME_MAPPING_ERR_TAKEN');
+                throw new MappingException('COM_BIOTIME_MAPPING_ERR_TAKEN');
+            }
+
+            // 1.3.8: a match that was never confirmed (or was suspended) does not keep the employee
+            // from the user the administrator names. Otherwise anyone could block a colleague's
+            // mapping by putting the colleague's e-mail on their own account. The other user's row is
+            // removed; their next visit is matched again.
+            $this->repository->delete($owner->joomlaUserId);
+            $this->audit->record($owner->joomlaUserId, 'mapping.release', AuditLogInterface::RESULT_OK, 'employee:' . $employeeId . ' for:' . $joomlaUserId, $actorId);
         }
 
         $now = ($this->clock)();
 
+        try {
+            $this->save($joomlaUserId, $employeeId, $empCode, $joomlaEmail, $now, $actorId);
+        } catch (\RuntimeException) {
+            // Another request mapped this employee between the check and the write (unique key).
+            $this->audit->record($joomlaUserId, 'mapping.assign', AuditLogInterface::RESULT_DENIED, 'employee_already_mapped', $actorId);
+
+            throw new MappingException('COM_BIOTIME_MAPPING_ERR_TAKEN');
+        }
+
+        $this->audit->record($joomlaUserId, 'mapping.assign', AuditLogInterface::RESULT_OK, 'employee:' . $employeeId, $actorId);
+
+        return $employee;
+    }
+
+    private function save(int $joomlaUserId, string $employeeId, string $empCode, string $joomlaEmail, \DateTimeImmutable $now, int $actorId): void
+    {
         $this->repository->save(new UserMapping(
             $joomlaUserId,
             $employeeId,
@@ -107,10 +132,6 @@ final class MappingManager
             $now,
             $actorId
         ));
-
-        $this->audit->record($joomlaUserId, 'mapping.assign', AuditLogInterface::RESULT_OK, 'employee:' . $employeeId, $actorId);
-
-        return $employee;
     }
 
     /**
@@ -149,7 +170,8 @@ final class MappingManager
     /** Delete the mapping, so the next visit runs automatic matching again. */
     public function rematch(int $joomlaUserId, int $actorId): void
     {
+        $had = $this->repository->find($joomlaUserId) !== null;
         $this->repository->delete($joomlaUserId);
-        $this->audit->record($joomlaUserId, 'mapping.rematch', AuditLogInterface::RESULT_OK, '', $actorId);
+        $this->audit->record($joomlaUserId, 'mapping.rematch', AuditLogInterface::RESULT_OK, $had ? '' : 'no_mapping', $actorId);
     }
 }

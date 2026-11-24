@@ -45,13 +45,13 @@ final class SettingsController extends BaseController
             $changed = $this->model()->save($data);
             $this->app->setUserState(self::STATE_KEY, null);
             // Which settings changed (1.3.7 audit): names only, never a value.
-            $this->component()->getAuditLog()->record($this->actorId(), 'settings.save', AuditLogInterface::RESULT_OK, mb_substr('changed: ' . ($changed === [] ? 'none' : implode(',', $changed)), 0, 255));
+            $this->component()->getAuditLog()->record($this->actorId(), 'settings.save', AuditLogInterface::RESULT_OK, mb_substr('changed: ' . ($changed === [] ? 'none' : implode(',', $changed)), 0, 255), $this->actorId());
             $this->app->enqueueMessage(Text::_('COM_BIOTIME_SETTINGS_SAVED'), 'success');
         } catch (ValidationFailed $e) {
             // Keep the entered values for the form, but never the password.
             unset($data['db_password']);
             $this->app->setUserState(self::STATE_KEY, $data);
-            $this->component()->getAuditLog()->record($this->actorId(), 'settings.save', AuditLogInterface::RESULT_DENIED, 'invalid');
+            $this->component()->getAuditLog()->record($this->actorId(), 'settings.save', AuditLogInterface::RESULT_DENIED, 'invalid', $this->actorId());
 
             foreach ($e->getKeys() as $key) {
                 $this->app->enqueueMessage(Text::_($key), 'error');
@@ -77,11 +77,11 @@ final class SettingsController extends BaseController
         try {
             $report = $this->model()->testDatabase();
             $this->app->setUserState(self::STATE_DB, $report + ['error' => null, 'detail' => '']);
-            $audit->record($this->actorId(), 'settings.testdb', AuditLogInterface::RESULT_OK, $report['engine'] . ($report['safe'] ? ' safe' : ' not-read-only'));
+            $audit->record($this->actorId(), 'settings.testdb', AuditLogInterface::RESULT_OK, $report['engine'] . ($report['safe'] ? ' safe' : ' not-read-only'), $this->actorId());
             $this->app->enqueueMessage(Text::sprintf('COM_BIOTIME_DB_TEST_OK', $report['elapsed_ms']), $report['safe'] ? 'success' : 'warning');
         } catch (DbException $e) {
             $this->app->setUserState(self::STATE_DB, ['error' => $e->getKind(), 'detail' => $e->getDetail(), 'at' => time()]);
-            $audit->record($this->actorId(), 'settings.testdb', $e->getKind() === DbException::NOT_CONFIGURED ? AuditLogInterface::RESULT_DENIED : AuditLogInterface::RESULT_ERROR, $e->getKind());
+            $audit->record($this->actorId(), 'settings.testdb', $e->getKind() === DbException::NOT_CONFIGURED ? AuditLogInterface::RESULT_DENIED : AuditLogInterface::RESULT_ERROR, $e->getKind(), $this->actorId());
             $this->component()->getLogger()->warning('Test Database: ' . $e->getKind() . ($e->getDetail() !== '' ? ' (' . $e->getDetail() . ')' : ''));
             $this->app->enqueueMessage(Text::_($e->getLanguageKey()), 'error');
         }

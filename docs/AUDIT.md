@@ -46,7 +46,7 @@ This was a code review, not a penetration test of a live site.
 | Identity | Joomla user → ZKBioTime employee mapping (`#__biotime_usermap`): by an admin-only profile field, by e-mail (waiting for approval by default), or by an administrator. |
 | Pages | My Dashboard, My Attendance, Calendar, Day, My Punches, My Leaves, My Approvals, Manager Dashboard (team scope from ZKBioTime's user/department permissions), print page and server-side PDF (bundled mPDF 8.3.1). |
 | Cache | Per user and employee in `#__biotime_cache` (plain JSON, no secrets). It may be served past its time for up to 7 days while the page reloads itself in the background (`refresh.js`); team scope and approver lists never are. |
-| Administrator | Integration Settings (password encrypted with AES-256-GCM, key from `BIOTIME_SECRET` or Joomla's `secret` through HKDF), User Mappings, Find Tables (read-only schema explorer and Diagnostics). Super user only (`core.admin`). |
+| Administrator | Integration Settings (password encrypted with AES-256-GCM, key from `BIOTIME_PORTAL_SECRET` or Joomla's `secret` through HKDF), User Mappings, Find Tables (read-only schema explorer and Diagnostics). Super user only (`core.admin`). |
 | Audit and limits | `#__biotime_audit` (identity events, admin actions, PDF exports), rate limits on Test Database, Find Tables and PDF exports. |
 
 The design keeps the separation it had: readers (SQL) → `AttendanceService` (rules, cache) → models → views and templates. The audit added no new layers.

@@ -45,7 +45,9 @@ final class UsermapModel extends FormModel
     {
         $state = Factory::getApplication()->getUserState(self::STATE_KEY, []);
 
-        if (\is_array($state) && $state !== []) {
+        // The values of a failed save, only for the same Joomla user (1.3.8): opening another user
+        // after a failed save showed, and would have saved, the first user's id.
+        if (\is_array($state) && $state !== [] && (int) ($state['joomla_user_id'] ?? 0) === $this->requestedUserId()) {
             return $state;
         }
 
